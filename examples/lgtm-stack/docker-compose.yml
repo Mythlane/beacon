@@ -1,0 +1,122 @@
+# Beacon — LGTM example stack (local development).
+#
+# Runs a self-contained Grafana + Tempo + Loki + Mimir + Pyroscope stack with
+# an OTel Collector fan-out, suitable for verifying Beacon end-to-end without
+# any external SaaS account.
+#
+# Usage:
+#   docker compose up -d --wait
+#   open http://localhost:3000  (admin / admin)
+#
+# All ports are bound to 127.0.0.1 (localhost-only) — see threat T-1-06-02.
+# Grafana admin/admin default is local-dev only — see threat T-1-06-01.
+
+name: beacon-lgtm
+
+networks:
+  lgtm:
+    driver: bridge
+
+services:
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: beacon-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "127.0.0.1:3200:3200"
+    networks: [lgtm]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: beacon-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki/loki.yaml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks: [lgtm]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  mimir:
+    image: grafana/mimir:2.14.2
+    container_name: beacon-mimir
+    command: ["-config.file=/etc/mimir.yaml"]
+    volumes:
+      - ./mimir/mimir.yaml:/etc/mimir.yaml:ro
+    ports:
+      - "127.0.0.1:9009:9009"
+    networks: [lgtm]
+    restart: unless-stopped
+    # Distroless image — no wget/curl. Liveness verified externally by scripts/smoke-test.sh.
+
+  pyroscope:
+    image: grafana/pyroscope:1.13.4
+    container_name: beacon-pyroscope
+    ports:
+      - "127.0.0.1:4040:4040"
+    networks: [lgtm]
+    restart: unless-stopped
+    # Distroless image — no wget/curl. Liveness verified externally by scripts/smoke-test.sh.
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.151.0
+    container_name: beacon-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
+      - "127.0.0.1:4318:4318"   # OTLP HTTP
+      - "127.0.0.1:13133:13133" # health_check extension
+    networks: [lgtm]
+    depends_on:
+      tempo:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      mimir:
+        condition: service_started
+    restart: unless-stopped
+    # Distroless image — no wget/curl. Liveness verified externally by scripts/smoke-test.sh.
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: beacon-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks: [lgtm]
+    depends_on:
+      tempo:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      mimir:
+        condition: service_started
+      pyroscope:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12

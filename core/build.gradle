@@ -5,4 +5,20 @@ plugins {
 // `core` = pure logic (config parsing, OTel SDK construction, queue/breaker primitives).
 // No Hytale dep, no Shadow. Testable on plain JVM. Pure Java 21.
 //
-// OTel SDK deps land in Plan 02. For now, only test stubs live here.
+// Plan 02 wires the OTel SDK + tomlj for config precedence + lifecycle factory.
+
+dependencies {
+    // OpenTelemetry SDK 1.61.0 (BOM-managed) — see gradle/libs.versions.toml
+    implementation platform(libs.otel.bom)
+    implementation libs.otel.api
+    implementation libs.otel.sdk
+    implementation libs.otel.sdk.autoconfigure
+    implementation libs.otel.exporter.otlp
+
+    // TOML config parser (battle-tested; cf. RESEARCH.md A5 / threat T-1-02-01)
+    implementation 'org.tomlj:tomlj:1.1.1'
+
+    // Lightweight logging — slf4j-api only in main; impl picked up by binding in tests.
+    implementation libs.slf4j.api
+    testRuntimeOnly libs.slf4j.simple
+}

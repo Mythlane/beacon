@@ -5,14 +5,24 @@ plugins {
 // `binding` = the only module that depends on the Hytale SDK.
 // Owns plugin lifecycle (setup/start/shutdown) and event registration.
 // Adds an `integrationTest` source set for FND-01 / FND-05 integration coverage.
-//
-// Note: hytale-server artifact resolution requires the Hytale Maven repo + access
-// credentials. Plan 02 wires the actual `compileOnly(libs.hytale.server)` dependency.
-// Wave 0 keeps this module compilable without that dep — only test stubs live here.
 
 dependencies {
     implementation project(':core')
     implementation project(':instrum')
+
+    // OTel API surface for the lifecycle accessor return type.
+    implementation platform(libs.otel.bom)
+    implementation libs.otel.api
+    implementation libs.otel.sdk
+
+    implementation libs.slf4j.api
+
+    // Hytale server SDK — D-12 install path resolved (Plan 01). Resolves from the
+    // public Hytale Maven repo (verified during Plan 02 spike: HTTP 200, no auth needed).
+    compileOnly libs.hytale.server
+
+    testImplementation libs.hytale.server
+    testRuntimeOnly libs.slf4j.simple
 }
 
 // --- integrationTest source set ---------------------------------------------------

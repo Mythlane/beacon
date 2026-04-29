@@ -1,0 +1,15 @@
+# Auto-provision JSON dashboards from this directory.
+apiVersion: 1
+
+providers:
+  - name: Beacon
+    orgId: 1
+    folder: Beacon
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false
