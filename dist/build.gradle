@@ -1,11 +1,30 @@
+import java.util.zip.ZipFile
+import java.util.zip.ZipEntry
+
 plugins {
     id 'beacon-conventions'
     alias(libs.plugins.shadow)
 }
 
-// `dist` = fat-JAR assembly with shading rules.
-// Shade relocations live in Plan 05 (Shading + CI Gate). For now, this module just
-// aggregates the runtime modules so the build graph is connected.
+// `dist` = fat-JAR assembly with shading rules (Plan 01-05).
+//
+// We bundle core + instrum + binding into a single shaded JAR consumable as a
+// Hytale plugin via the D-12 install path. agent-ext is intentionally excluded
+// — it ships as a separate JAR (per CLAUDE.md "OTel Java Agent Extension
+// Pattern").
+//
+// All io.opentelemetry / io.grpc / com.google.protobuf / io.netty / okhttp3 /
+// okio / io.perfmark classes are relocated under com.mythlane.beacon.shaded.*
+// to avoid version collisions with Hytale-bundled libraries (PITFALLS P3:
+// Hytale ships protobuf 4.33.0 + Netty 4.x; exact major+minor overlap with
+// OTel's gRPC exporter would produce ClassCastException at runtime).
+//
+// `mergeServiceFiles()` preserves the OTel autoconfigure SPI registrations
+// that Shadow would otherwise overwrite when collapsing META-INF/services
+// across the OTel BOM artifacts.
+//
+// CI gates `checkShading` and `verifyServiceFiles` (registered below) fail
+// the build on any regression.
 
 dependencies {
     implementation project(':core')
@@ -14,4 +33,136 @@ dependencies {
 
     // JSON parsing for DashboardJsonTest (validates Server Health dashboard JSON).
     testImplementation 'org.json:json:20240303'
+}
+
+tasks.named('shadowJar') {
+    archiveBaseName.set('beacon')
+    archiveVersion.set('0.1.0-alpha')
+    archiveClassifier.set('')
+
+    // Preserve OTel autoconfigure SPI files (PITFALLS P3 / R2).
+    mergeServiceFiles()
+
+    // 6 (+1) relocations — see CLAUDE.md "Concrete relocate() directives".
+    relocate 'io.opentelemetry',     'com.mythlane.beacon.shaded.otel'
+    relocate 'io.grpc',              'com.mythlane.beacon.shaded.grpc'
+    relocate 'com.google.protobuf',  'com.mythlane.beacon.shaded.protobuf'
+    relocate 'io.netty',             'com.mythlane.beacon.shaded.netty'
+    relocate 'okhttp3',              'com.mythlane.beacon.shaded.okhttp3'
+    relocate 'okio',                 'com.mythlane.beacon.shaded.okio'
+    relocate 'io.perfmark',          'com.mythlane.beacon.shaded.perfmark'
+
+    // NOTE: do NOT relocate com.mythlane.beacon.* (own code) or
+    // com.hypixel.hytale.* (server SDK — provided at runtime by Hytale).
+}
+
+// Make `gradle build` produce the shaded JAR.
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
+}
+
+// --------------------------------------------------------------------------
+// CI gates: checkShading + verifyServiceFiles (R1, R2)
+// --------------------------------------------------------------------------
+
+def unshadedRegex = ~$/^(io/opentelemetry|io/grpc|com/google/protobuf|io/netty|okhttp3|okio|io/perfmark)/.*\.class$/$
+
+tasks.register('checkShading') {
+    group = 'verification'
+    description = 'Fails the build if the shaded JAR contains any unrelocated io.* / com.google.protobuf / okhttp3 / okio class (R1).'
+    dependsOn tasks.named('shadowJar')
+
+    doLast {
+        def jarFile = tasks.named('shadowJar').get().archiveFile.get().asFile
+        if (!jarFile.exists()) {
+            throw new GradleException("checkShading: shadow JAR not found at " + jarFile)
+        }
+        def offenders = []
+        new ZipFile(jarFile).withCloseable { zf ->
+            def entries = zf.entries()
+            while (entries.hasMoreElements()) {
+                ZipEntry e = entries.nextElement()
+                if (unshadedRegex.matcher(e.name).matches()) {
+                    offenders << e.name
+                }
+            }
+        }
+        if (!offenders.isEmpty()) {
+            def preview = offenders.take(20).join('\n  ')
+            throw new GradleException(
+                "checkShading FAILED: " + offenders.size() + " unrelocated classes found in " + jarFile.name + ".\n" +
+                "These packages must be relocated under com.mythlane.beacon.shaded.* (PITFALLS P3).\n" +
+                "First offenders:\n  " + preview
+            )
+        }
+        logger.lifecycle("checkShading PASSED: 0 unshaded io/protobuf/okhttp3/okio/perfmark classes in " + jarFile.name)
+    }
+}
+
+tasks.register('verifyServiceFiles') {
+    group = 'verification'
+    description = 'Asserts the shaded JAR preserves OTel autoconfigure SPI registrations (R2).'
+    dependsOn tasks.named('shadowJar')
+
+    doLast {
+        def jarFile = tasks.named('shadowJar').get().archiveFile.get().asFile
+        if (!jarFile.exists()) {
+            throw new GradleException("verifyServiceFiles: shadow JAR not found at " + jarFile)
+        }
+
+        // Shadow rewrites both the path AND contents of META-INF/services files
+        // when relocate() applies. We require that the OTel autoconfigure SPI
+        // ecosystem is preserved post-merge — at minimum the ConfigurableMetric/
+        // Span/LogRecord ExporterProviders, ResourceProvider, and ComponentProvider
+        // (these are the actual provider SPIs the OTel SDK loads; the
+        // AutoConfigurationCustomizerProvider SPI exists only if a user installs
+        // a customizer extension JAR, so it is NOT a reliable witness).
+        def requiredSpiSuffixes = [
+            'sdk.autoconfigure.spi.ResourceProvider',
+            'sdk.autoconfigure.spi.internal.ComponentProvider',
+            'sdk.autoconfigure.spi.logs.ConfigurableLogRecordExporterProvider',
+            'sdk.autoconfigure.spi.metrics.ConfigurableMetricExporterProvider',
+            'sdk.autoconfigure.spi.traces.ConfigurableSpanExporterProvider'
+        ]
+
+        def shadedRoot = 'META-INF/services/com.mythlane.beacon.shaded.otel.'
+        def unshadedRoot = 'META-INF/services/io.opentelemetry.'
+
+        def foundPaths = []
+        def missing = new ArrayList(requiredSpiSuffixes)
+
+        new ZipFile(jarFile).withCloseable { zf ->
+            for (suffix in requiredSpiSuffixes) {
+                def shaded = shadedRoot + suffix
+                def unshaded = unshadedRoot + suffix
+                def entry = zf.getEntry(shaded)
+                def usedPath = shaded
+                if (entry == null) {
+                    entry = zf.getEntry(unshaded)
+                    usedPath = unshaded
+                }
+                if (entry != null) {
+                    def text = zf.getInputStream(entry).text.trim()
+                    if (!text.isEmpty()) {
+                        foundPaths << usedPath
+                        missing.remove(suffix)
+                    }
+                }
+            }
+        }
+
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                "verifyServiceFiles FAILED: required OTel autoconfigure SPI file(s) missing from " + jarFile.name + ".\n" +
+                "Missing suffixes:\n  - " + missing.join('\n  - ') + "\n" +
+                "mergeServiceFiles may have been removed from shadowJar config (R2)."
+            )
+        }
+        logger.lifecycle("verifyServiceFiles PASSED: " + foundPaths.size() + " OTel autoconfigure SPI files preserved in " + jarFile.name)
+    }
+}
+
+// Wire both gates into ./gradlew check.
+tasks.named('check') {
+    dependsOn 'checkShading', 'verifyServiceFiles'
 }
