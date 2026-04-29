@@ -2,30 +2,28 @@ plugins {
     id 'beacon-conventions'
 }
 
-// `binding` = the only module that depends on the Hytale SDK.
-// Owns plugin lifecycle (setup/start/shutdown) and event registration.
-// Adds an `integrationTest` source set for FND-01 / FND-05 integration coverage.
+// binding is the only module that depends on the Hytale SDK. It owns the
+// plugin lifecycle and event registration, and carries an integrationTest
+// source set for lifecycle coverage.
 
 dependencies {
     implementation project(':core')
     implementation project(':instrum')
 
-    // OTel API surface for the lifecycle accessor return type.
     implementation platform(libs.otel.bom)
     implementation libs.otel.api
     implementation libs.otel.sdk
 
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-runtime-telemetry-java17:2.10.0-alpha'
+
     implementation libs.slf4j.api
 
-    // Hytale server SDK — D-12 install path resolved (Plan 01). Resolves from the
-    // public Hytale Maven repo (verified during Plan 02 spike: HTTP 200, no auth needed).
     compileOnly libs.hytale.server
 
     testImplementation libs.hytale.server
     testRuntimeOnly libs.slf4j.simple
 }
 
-// --- integrationTest source set ---------------------------------------------------
 sourceSets {
     integrationTest {
         java.srcDir 'src/integrationTest/java'
@@ -41,7 +39,7 @@ configurations {
 }
 
 tasks.register('integrationTest', Test) {
-    description = 'Runs binding integration tests (FND-01 lifecycle, FND-05 player events).'
+    description = 'Runs binding integration tests.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath

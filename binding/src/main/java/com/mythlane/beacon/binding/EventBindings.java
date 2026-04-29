@@ -16,22 +16,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Wires Hytale player-lifecycle events into Beacon's
- * {@link PlayerCountRegistry}, applying the
- * <strong>{@code registerGlobal} vs {@code register}</strong> rule from
- * API-REFERENCE.md §Phase 2 / mythlane learning:
- *
- * <ul>
- *   <li>{@link PlayerReadyEvent} has KeyType=String → MUST use
- *       {@link IEventRegistry#registerGlobal(Class, java.util.function.Consumer) registerGlobal}.
- *       Calling {@code register(...)} on a non-Void KeyType compiles but never fires.</li>
- *   <li>{@link PlayerDisconnectEvent} has KeyType=Void → MUST use plain
- *       {@link IEventRegistry#register(Class, java.util.function.Consumer) register}.</li>
- * </ul>
- *
- * <p>Idempotency is handled inside {@link PlayerCountRegistry} (set semantics) —
- * decompiled evidence shows {@code PlayerDisconnectEvent} is single-fire, but a
- * re-entrant world.execute() shutdown race could still re-deliver it.
+ * Wires Hytale player-lifecycle events into {@link PlayerCountRegistry}.
+ * {@link PlayerReadyEvent} (KeyType=String) must use
+ * {@link IEventRegistry#registerGlobal} or it never fires;
+ * {@link PlayerDisconnectEvent} (KeyType=Void) must use plain
+ * {@link IEventRegistry#register}.
  */
 public final class EventBindings {
 
@@ -43,19 +32,14 @@ public final class EventBindings {
         this.registry = registry;
     }
 
-    /** Register both event handlers against the supplied plugin event registry. */
     public void register(IEventRegistry events) {
-        // KeyType=String → registerGlobal MANDATORY (API-REFERENCE.md §Phase 2).
         Consumer<PlayerReadyEvent> readyHandler = this::onPlayerReady;
         events.registerGlobal(PlayerReadyEvent.class, readyHandler);
 
-        // KeyType=Void → plain register (registerGlobal would also work but is
-        // semantically wrong; we keep the explicit pairing for clarity).
         Consumer<PlayerDisconnectEvent> disconnectHandler = this::onPlayerDisconnect;
         events.register(PlayerDisconnectEvent.class, disconnectHandler);
     }
 
-    /** Visible for tests: the join-side handler. */
     void onPlayerReady(PlayerReadyEvent event) {
         try {
             Player player = event.getPlayer();
@@ -70,7 +54,6 @@ public final class EventBindings {
         }
     }
 
-    /** Visible for tests: the leave-side handler. */
     void onPlayerDisconnect(PlayerDisconnectEvent event) {
         try {
             PlayerRef ref = event.getPlayerRef();
@@ -83,18 +66,11 @@ public final class EventBindings {
         }
     }
 
-    /**
-     * Pure UUID-level join handler. Decoupled from Hytale event types so it can
-     * be exercised in tests without standing up Player/World/PlayerRef
-     * (their {@code <clinit>}s pull in asset-store machinery unavailable to
-     * the test JVM). Null-safe.
-     */
     void applyJoin(UUID worldUuid, UUID playerUuid) {
         if (worldUuid == null || playerUuid == null) return;
         registry.playerJoined(worldUuid, playerUuid);
     }
 
-    /** Pure UUID-level leave handler. Mirror of {@link #applyJoin}. Idempotent. */
     void applyLeave(UUID worldUuid, UUID playerUuid) {
         if (worldUuid == null || playerUuid == null) return;
         registry.playerLeft(worldUuid, playerUuid);

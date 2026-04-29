@@ -8,13 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Defensive contract for the player-disconnect handler.
- *
- * <p>PlayerDisconnectEvent is single-fire per decompiled Universe.removePlayer() lines 966-968.
- * Idempotent handler is defensive insurance against future Hytale changes
- * and against any handler re-entry via world.execute() shutdown races.
- */
 class PlayerCountIdempotencyTest {
 
     @Test
@@ -29,12 +22,9 @@ class PlayerCountIdempotencyTest {
         r.playerLeft(world, player);
         assertThat(r.snapshot(world)).isEqualTo(0L);
 
-        // Defensive: a second disconnect for the same player must not push count
-        // below zero or otherwise corrupt internal state.
         r.playerLeft(world, player);
         assertThat(r.snapshot(world)).isEqualTo(0L);
 
-        // And a re-join afterwards still works.
         r.playerJoined(world, player);
         assertThat(r.snapshot(world)).isEqualTo(1L);
     }
@@ -46,7 +36,7 @@ class PlayerCountIdempotencyTest {
         UUID player = UUID.randomUUID();
 
         r.playerJoined(world, player);
-        r.playerJoined(world, player); // simulated re-entry / replayed event
+        r.playerJoined(world, player);
         assertThat(r.snapshot(world)).isEqualTo(1L);
     }
 }

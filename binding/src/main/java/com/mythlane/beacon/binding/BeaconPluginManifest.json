@@ -1,8 +1,0 @@
-{
-  "Name": "Mythlane.Beacon",
-  "Version": "0.1.0-alpha",
-  "Author": "Mythlane",
-  "Description": "OpenTelemetry observability for Hytale servers",
-  "EntryPoint": "com.mythlane.beacon.binding.BeaconPlugin",
-  "Dependencies": {}
-}
