@@ -1,6 +1,7 @@
 plugins {
     id 'beacon-conventions'
     id 'application'
+    alias(libs.plugins.jmh)
 }
 
 // QUIC bench bot harness. Plain Java 21, no shading, no publishing.
@@ -30,6 +31,22 @@ dependencies {
     implementation libs.netty.codec
     implementation libs.slf4j.api
     runtimeOnly libs.slf4j.simple
+
+    jmhImplementation platform(libs.otel.bom)
+    jmhImplementation project(':core')
+    jmhImplementation project(':instrum')
+    jmhImplementation libs.otel.api
+    jmhImplementation libs.otel.sdk
+}
+
+jmh {
+    fork = 2
+    warmupIterations = 3
+    iterations = 5
+    timeUnit = 'ns'
+    benchmarkMode = ['avgt']
+    resultFormat = 'JSON'
+    resultsFile = layout.buildDirectory.file('results/jmh/results.json')
 }
 
 tasks.register('smokeTest', JavaExec) {

@@ -11,6 +11,7 @@ slf4j = "2.0.13"
 hytaleServer = "2026.03.26-89796e57b"
 nettyIncubatorQuic = "0.0.72.Final"
 netty = "4.1.115.Final"
+jmhPlugin = "0.7.3"
 
 [libraries]
 # OpenTelemetry SDK 1.61.0 (BOM-managed)
@@ -52,3 +53,4 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+jmh    = { id = "me.champeau.jmh", version.ref = "jmhPlugin" }
