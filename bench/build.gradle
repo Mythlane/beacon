@@ -3,11 +3,68 @@ plugins {
     id 'application'
 }
 
-// `bench` = QUIC bench bot harness (Plan 07).
-// Plain Java 21, no shading, no publishing.
-// QUIC client lib dependency is deferred until B1 spike resolves (see
-// .planning/phases/01-foundation/spike-results/B1-quic.md).
+// QUIC bench bot harness. Plain Java 21, no shading, no publishing.
+// Backed by Netty incubator QUIC plus a per-OS native classifier.
 
 application {
     mainClass = 'com.mythlane.beacon.bench.BenchMain'
+}
+
+def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+def osArch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+def nativeClassifier
+if (osName.contains('windows')) {
+    nativeClassifier = 'windows-x86_64'
+} else if (osName.contains('mac') || osName.contains('darwin')) {
+    nativeClassifier = osArch.contains('aarch') ? 'osx-aarch_64' : 'osx-x86_64'
+} else {
+    nativeClassifier = osArch.contains('aarch') ? 'linux-aarch_64' : 'linux-x86_64'
+}
+
+dependencies {
+    implementation libs.netty.codec.classes.quic
+    implementation(variantOf(libs.netty.codec.native.quic) { classifier(nativeClassifier) })
+    implementation libs.netty.handler
+    implementation libs.netty.buffer
+    implementation libs.netty.transport
+    implementation libs.netty.codec
+    implementation libs.slf4j.api
+    runtimeOnly libs.slf4j.simple
+}
+
+tasks.register('smokeTest', JavaExec) {
+    group = 'verification'
+    description = '1-player 30s connection sanity check.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.mythlane.beacon.bench.SmokeTest'
+    workingDir = rootProject.projectDir
+    def target = (findProperty('bench.target') ?: 'localhost:5520')
+    args = ['--target=' + target]
+}
+
+tasks.register('overheadBench', JavaExec) {
+    group = 'verification'
+    description = '3-run median CPU/memory overhead bench.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.mythlane.beacon.bench.BenchMain'
+    workingDir = rootProject.projectDir
+    if (findProperty('bench.live') in ['1', 'true']) {
+        systemProperty 'beacon.bench.live', '1'
+    }
+    if (System.getenv('BEACON_BENCH_LIVE') in ['1', 'true']) {
+        systemProperty 'beacon.bench.live', '1'
+    }
+    def target = (findProperty('bench.target') ?: 'localhost:5520')
+    def players = (findProperty('bench.players') ?: '20')
+    def duration = (findProperty('bench.duration') ?: '600')
+    def runs = (findProperty('bench.runs') ?: '3')
+    def report = (findProperty('bench.report') ?: rootProject.file('docs/perf.md').absolutePath)
+    args = [
+            '--mode=overhead',
+            '--target=' + target,
+            '--players=' + players,
+            '--duration=' + duration,
+            '--runs=' + runs,
+            '--report=' + report
+    ]
 }
