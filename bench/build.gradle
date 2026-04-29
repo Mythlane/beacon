@@ -1,0 +1,13 @@
+plugins {
+    id 'beacon-conventions'
+    id 'application'
+}
+
+// `bench` = QUIC bench bot harness (Plan 07).
+// Plain Java 21, no shading, no publishing.
+// QUIC client lib dependency is deferred until B1 spike resolves (see
+// .planning/phases/01-foundation/spike-results/B1-quic.md).
+
+application {
+    mainClass = 'com.mythlane.beacon.bench.BenchMain'
+}

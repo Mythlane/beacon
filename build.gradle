@@ -1,0 +1,13 @@
+// Root build script for Beacon.
+//
+// All shared toolchain + test wiring lives in the `beacon-conventions` precompiled
+// script plugin under `buildSrc/`. Modules opt in via `plugins { id 'beacon-conventions' }`.
+//
+// Per CLAUDE.md: NO git commits will be performed by Claude. Manual commit only.
+
+group = findProperty('libGroup') ?: 'com.mythlane'
+version = findProperty('libVersion') ?: '0.1.0-alpha'
+
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
+}

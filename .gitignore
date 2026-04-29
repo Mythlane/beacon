@@ -1,0 +1,156 @@
+# =====================================================
+# Beacon — .gitignore (Java / Gradle project)
+# Based on GitHub's official Java.gitignore + Gradle.gitignore templates
+# =====================================================
+
+# --- Compiled class files ---
+*.class
+
+# --- Log files ---
+*.log
+*.log.*
+
+# --- BlueJ files ---
+*.ctxt
+
+# --- Mobile Tools for Java (J2ME) ---
+.mtj.tmp/
+
+# --- Package Files ---
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- JVM crash logs ---
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# --- Gradle ---
+.gradle/
+**/build/
+**/.kotlin/
+!src/**/build/
+!gradle/wrapper/build/
+!**/src/**/build/
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+!**/gradle-wrapper.jar
+
+# Cache of project
+.gradletasknamecache
+
+# Eclipse Gradle plugin generated files
+# Eclipse Core
+.project
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
+.settings/
+.factorypath
+bin/
+
+# --- Maven (in case any module ever uses Maven) ---
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# --- VS Code ---
+.vscode/
+!.vscode/extensions.json
+!.vscode/launch.json.example
+
+# --- Eclipse APT / annotation processing ---
+.apt_generated/
+.apt_generated_test/
+
+# --- NetBeans ---
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# --- JEnv ---
+.java-version
+
+# --- OS junk ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+
+# --- Editor temp / swap ---
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+*.tmp
+*.suo
+*.sw?
+
+# --- Local environment overrides ---
+.env
+.env.local
+.env.*.local
+*.local.properties
+gradle.local.properties
+
+# --- Test coverage reports ---
+coverage/
+*.exec
+*.ec
+jacoco.exec
+**/jacoco/
+
+# =====================================================
+# Project-specific
+# =====================================================
+
+# Hytale game install (large, user-provided, regeneratable)
+Hytale/
+Hytale Launcher/
+Hytale*/
+
+# Decompiled Hytale corpus (large, regeneratable from server JAR)
+decompiled/
+
+# Bench harness regenerable artifacts
+bench/results/
+docs/perf-history/
+
+# Docker / LGTM stack runtime data
+examples/lgtm-stack/data/
+examples/lgtm-stack/.volumes/
+
+# =====================================================
+# Workflow
+# =====================================================
+
+.planning/
+.claude/
+CLAUDE.md

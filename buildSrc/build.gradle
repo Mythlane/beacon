@@ -1,0 +1,11 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+// buildSrc applies the standard `java` plugin to all modules via the
+// `beacon-conventions` precompiled script plugin (Groovy DSL).

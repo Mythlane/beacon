@@ -1,0 +1,14 @@
+plugins {
+    id 'beacon-conventions'
+    alias(libs.plugins.shadow)
+}
+
+// `dist` = fat-JAR assembly with shading rules.
+// Shade relocations live in Plan 05 (Shading + CI Gate). For now, this module just
+// aggregates the runtime modules so the build graph is connected.
+
+dependencies {
+    implementation project(':core')
+    implementation project(':instrum')
+    implementation project(':binding')
+}

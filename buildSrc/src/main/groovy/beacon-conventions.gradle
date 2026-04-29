@@ -1,0 +1,49 @@
+// Shared Java convention plugin for all Beacon modules.
+//
+// Toolchain: JDK 25 (Gradle auto-provisions).
+// JVM bytecode target: 21 (LTS).
+// Test framework: JUnit 5 + Mockito + AssertJ.
+// Test JVM args: -Dnet.bytebuddy.experimental=true (required for Mockito on JDK 25).
+
+plugins {
+    id 'java-library'
+}
+
+group = (findProperty('libGroup') ?: 'com.mythlane')
+version = (findProperty('libVersion') ?: '0.1.0-alpha')
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'hytale'
+        url = uri('https://maven.hytale.com/release')
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.12.0'
+    testImplementation 'org.assertj:assertj-core:3.26.0'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    jvmArgs '-Dnet.bytebuddy.experimental=true'
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = false
+    }
+}

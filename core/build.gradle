@@ -1,0 +1,8 @@
+plugins {
+    id 'beacon-conventions'
+}
+
+// `core` = pure logic (config parsing, OTel SDK construction, queue/breaker primitives).
+// No Hytale dep, no Shadow. Testable on plain JVM. Pure Java 21.
+//
+// OTel SDK deps land in Plan 02. For now, only test stubs live here.

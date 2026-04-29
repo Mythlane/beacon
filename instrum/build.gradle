@@ -1,0 +1,11 @@
+plugins {
+    id 'beacon-conventions'
+}
+
+// `instrum` = Hytale-aware metric instruments (TPS, MSPT, players online).
+// Stateless; receives data from `binding` event handlers.
+// Depends on `core` only — no Hytale SDK dep so unit tests run without server JAR.
+
+dependencies {
+    implementation project(':core')
+}

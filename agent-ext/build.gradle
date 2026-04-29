@@ -1,0 +1,18 @@
+plugins {
+    id 'beacon-conventions'
+}
+
+// `agent-ext` = OTel Java Agent extension (loaded by agent classloader).
+// Standalone; classes here MUST NOT be shaded into `dist`.
+// Compiles against the agent extension API as `compileOnly` — the agent provides
+// the runtime classloader. Pure Java 21.
+//
+// SPI registration via standard Java APT (`META-INF/services/`) is wired in Plan 03.
+
+def versionCatalog = extensions.getByType(VersionCatalogsExtension).named('libs')
+
+dependencies {
+    compileOnly versionCatalog.findLibrary('otel-javaagent-extension-api').get()
+    compileOnly versionCatalog.findLibrary('autoservice-annotations').get()
+    annotationProcessor versionCatalog.findLibrary('autoservice-processor').get()
+}

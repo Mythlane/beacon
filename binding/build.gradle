@@ -1,0 +1,45 @@
+plugins {
+    id 'beacon-conventions'
+}
+
+// `binding` = the only module that depends on the Hytale SDK.
+// Owns plugin lifecycle (setup/start/shutdown) and event registration.
+// Adds an `integrationTest` source set for FND-01 / FND-05 integration coverage.
+//
+// Note: hytale-server artifact resolution requires the Hytale Maven repo + access
+// credentials. Plan 02 wires the actual `compileOnly(libs.hytale.server)` dependency.
+// Wave 0 keeps this module compilable without that dep — only test stubs live here.
+
+dependencies {
+    implementation project(':core')
+    implementation project(':instrum')
+}
+
+// --- integrationTest source set ---------------------------------------------------
+sourceSets {
+    integrationTest {
+        java.srcDir 'src/integrationTest/java'
+        resources.srcDir 'src/integrationTest/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.test.output
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs binding integration tests (FND-01 lifecycle, FND-05 player events).'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    useJUnitPlatform()
+    jvmArgs '-Dnet.bytebuddy.experimental=true'
+    shouldRunAfter 'test'
+}
+
+tasks.named('check') {
+    dependsOn 'integrationTest'
+}

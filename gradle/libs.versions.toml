@@ -1,0 +1,44 @@
+[versions]
+java = "21"
+shadow = "9.3.1"
+junit = "5.10.2"
+mockito = "5.12.0"
+assertj = "3.26.0"
+otelSdk = "1.61.0"
+otelAgent = "2.27.0"
+autoservice = "1.1.1"
+slf4j = "2.0.13"
+hytaleServer = "2026.03.26-89796e57b"
+
+[libraries]
+# OpenTelemetry SDK 1.61.0 (BOM-managed)
+otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "otelSdk" }
+otel-api = { module = "io.opentelemetry:opentelemetry-api" }
+otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk" }
+otel-sdk-autoconfigure = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure" }
+otel-sdk-autoconfigure-spi = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi" }
+otel-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
+
+# OpenTelemetry Java Agent extension API (2.27.0-alpha)
+otel-javaagent-extension-api = { module = "io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api", version = "2.27.0-alpha" }
+
+# AutoService for SPI registration
+autoservice-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoservice" }
+autoservice-processor = { module = "com.google.auto.service:auto-service", version.ref = "autoservice" }
+
+# Hytale server SDK (binding only)
+hytale-server = { module = "com.hypixel.hytale:Server", version.ref = "hytaleServer" }
+
+# Logging
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+
+# Test stack — JUnit 5 + Mockito + AssertJ (Java standard)
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.10.2" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
