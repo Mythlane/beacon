@@ -37,6 +37,7 @@ dependencies {
     jmhImplementation project(':instrum')
     jmhImplementation libs.otel.api
     jmhImplementation libs.otel.sdk
+    jmhImplementation 'io.opentelemetry:opentelemetry-sdk-testing'
 }
 
 jmh {
