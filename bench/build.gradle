@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id 'beacon-conventions'
     id 'application'
@@ -48,6 +50,160 @@ jmh {
     benchmarkMode = ['avgt']
     resultFormat = 'JSON'
     resultsFile = layout.buildDirectory.file('results/jmh/results.json')
+}
+
+tasks.register('overheadReport') {
+    group = 'verification'
+    description = 'Project Beacon CPU overhead from JMH results across 3 deployment scenarios.'
+
+    if (!project.hasProperty('skipJmh')) {
+        dependsOn tasks.named('jmh')
+    }
+
+    def resultsFileProvider = layout.buildDirectory.file('results/jmh/results.json')
+
+    doLast {
+        def file = resultsFileProvider.get().asFile
+        if (!file.exists()) {
+            throw new GradleException("JMH results not found at ${file}. Run without -PskipJmh first.")
+        }
+
+        def parsed = new JsonSlurper().parse(file)
+        def scores = [:]
+        def errors = [:]
+        parsed.each { entry ->
+            def shortName = entry.benchmark.tokenize('.').last()
+            scores[shortName] = entry.primaryMetric.score
+            errors[shortName] = entry.primaryMetric.scoreError
+        }
+
+        def required = ['recordOnce', 'joinThenLeave', 'collectAll', 'submitWithSuccess', 'submitWithFailure']
+        def missing = required.findAll { !scores.containsKey(it) }
+        if (missing) {
+            throw new GradleException("Missing benchmarks in results.json: ${missing}")
+        }
+
+        def scenarios = [
+            [name: 'small',  servers: 1,  worlds: 4,   players: 50,
+             passUnder: 0.1d, warnUnder: 0.5d],
+            [name: 'medium', servers: 10, worlds: 40,  players: 500,
+             passUnder: 0.3d, warnUnder: 0.7d],
+            [name: 'large',  servers: 50, worlds: 200, players: 5000,
+             passUnder: 0.5d, warnUnder: 1.0d],
+        ]
+
+        def projectScenario = { sc ->
+            def worldsPerServer  = (double) sc.worlds  / sc.servers
+            def playersPerServer = (double) sc.players / sc.servers
+
+            def psRecord  = scores.recordOnce        * worldsPerServer
+            def psPlayer  = scores.joinThenLeave     * playersPerServer * 0.05d
+            def psCollect = scores.collectAll                            * (1.0d / 30.0d)
+            def psSubmit  = scores.submitWithSuccess
+            def psTotal   = psRecord + psPlayer + psCollect + psSubmit
+            def psPct     = (psTotal / 1.0e7d) * 100.0d
+            def psBreakdown = [
+                recordOnce       : psRecord,
+                joinThenLeave    : psPlayer,
+                collectAll       : psCollect,
+                submitWithSuccess: psSubmit,
+            ]
+
+            def fleetRecord  = scores.recordOnce        * sc.worlds
+            def fleetPlayer  = scores.joinThenLeave     * sc.players * 0.05d
+            def fleetCollect = scores.collectAll        * sc.servers * (1.0d / 30.0d)
+            def fleetSubmit  = scores.submitWithSuccess * sc.servers
+            def fleetTotal   = fleetRecord + fleetPlayer + fleetCollect + fleetSubmit
+            def fleetCores   = fleetTotal / 1.0e9d
+
+            def verdict
+            if (psPct >= sc.warnUnder)      verdict = 'FAIL'
+            else if (psPct >= sc.passUnder) verdict = 'WARN'
+            else                            verdict = 'PASS'
+
+            return [name: sc.name,
+                    perServer: [total: psTotal, pct: psPct, breakdown: psBreakdown],
+                    fleet: [total: fleetTotal, cores: fleetCores],
+                    verdict: verdict, topology: sc]
+        }
+
+        def topContributors = { breakdown, total ->
+            breakdown.collect { k, v -> [name: k, ns: v, pct: (v / total) * 100.0d] }
+                .findAll { it.pct >= 5.0d }
+                .sort { -it.pct }
+                .take(3)
+        }
+
+        def useAnsi = System.console() != null
+        def green  = useAnsi ? '\u001B[32m' : ''
+        def yellow = useAnsi ? '\u001B[33m' : ''
+        def red    = useAnsi ? '\u001B[31m' : ''
+        def reset  = useAnsi ? '\u001B[0m'  : ''
+        def colorFor = { v -> v == 'PASS' ? green : (v == 'WARN' ? yellow : red) }
+
+        println()
+        println "Beacon overhead projection (from ${file.name})"
+        println()
+        println "  Hot path             ns/op       error"
+        ['recordOnce', 'joinThenLeave', 'collectAll', 'submitWithSuccess', 'submitWithFailure'].each { n ->
+            def note = (n == 'submitWithFailure') ? '  (informational, excluded)' : ''
+            println String.format('  %-20s %7.2f  +/-%6.2f%s', n, scores[n], errors[n], note)
+        }
+        println()
+        println "  Scenario  Topology                          per-server %CPU   fleet (cores)  Verdict"
+
+        def results = scenarios.collect(projectScenario)
+        results.each { r ->
+            def topo = "${r.topology.servers} srv x ${r.topology.worlds} wld x ${r.topology.players} pl"
+            def col = colorFor(r.verdict)
+            println String.format('  %-9s %-32s %12.4f%%   %12.6f   %s%s%s',
+                    r.name, topo, r.perServer.pct, r.fleet.cores, col, r.verdict, reset)
+        }
+
+        def large = results.find { it.name == 'large' }
+        def topLarge = topContributors(large.perServer.breakdown, large.perServer.total)
+        if (topLarge) {
+            def fmt = topLarge.collect { String.format('%s (%.0f%%)', it.name, it.pct) }.join(', ')
+            println()
+            println "  Top contributors per-server (large): ${fmt}"
+        }
+
+        def warnsOrFails = results.findAll { it.verdict != 'PASS' }
+        if (warnsOrFails) {
+            println()
+            warnsOrFails.each { r ->
+                def tops = topContributors(r.perServer.breakdown, r.perServer.total)
+                def fmt = tops.collect { String.format('%s (%.0f%%)', it.name, it.pct) }.join(', ')
+                println "  ${r.verdict} contributors (${r.name}): ${fmt}"
+            }
+        }
+
+        def hasFail = results.any { it.verdict == 'FAIL' }
+        def hasWarn = results.any { it.verdict == 'WARN' }
+        def banner = '=' * 60
+        println()
+        println "  ${banner}"
+        if (hasFail) {
+            println "  ${red}X FAIL  overhead exceeds v0.1 targets${reset}"
+        } else if (hasWarn) {
+            println "  ${yellow}! WARN  overhead within budget but approaching limits${reset}"
+        } else {
+            println "  ${green}OK PASS  all scenarios within v0.1 targets${reset}"
+        }
+        println String.format('   fleet (large): %.6f cores consumed across %d servers',
+                large.fleet.cores, large.topology.servers)
+        println "  ${banner}"
+        println()
+
+        if (hasFail) {
+            def offending = results.findAll { it.verdict == 'FAIL' }.collect { r ->
+                def tops = topContributors(r.perServer.breakdown, r.perServer.total)
+                def fmt = tops.collect { String.format('%s (%.0f%%)', it.name, it.pct) }.join(', ')
+                String.format('%s=%.4f%% (top: %s)', r.name, r.perServer.pct, fmt)
+            }.join('; ')
+            throw new GradleException("Overhead FAIL: ${offending}")
+        }
+    }
 }
 
 tasks.register('smokeTest', JavaExec) {
