@@ -2,18 +2,6 @@ package com.mythlane.beacon.core;
 
 import java.util.Objects;
 
-/**
- * Immutable Beacon configuration data class. Built by {@link ConfigLoader}.
- *
- * <p>Contract: precedence env > config.toml > defaults (D-04). Defaults
- * mandated by Plan 02 frontmatter:
- * <ul>
- *   <li>endpoint = {@code http://localhost:4317} (OTLP gRPC default)</li>
- *   <li>serviceName = {@code hytale-server}</li>
- *   <li>protocol = {@code grpc}</li>
- *   <li>queueMaxSize = {@code 16384} (D-08, PITFALLS P2)</li>
- * </ul>
- */
 public final class BeaconConfig {
 
     public static final String DEFAULT_ENDPOINT = "http://localhost:4317";

@@ -1,9 +1,5 @@
-// Shared Java convention plugin for all Beacon modules.
-//
-// Toolchain: JDK 25 (Gradle auto-provisions).
-// JVM bytecode target: 21 (LTS).
-// Test framework: JUnit 5 + Mockito + AssertJ.
-// Test JVM args: -Dnet.bytebuddy.experimental=true (required for Mockito on JDK 25).
+// Shared Java convention plugin for all Beacon modules. JDK 25 toolchain,
+// release target 21, JUnit 5 + Mockito + AssertJ.
 
 plugins {
     id 'java-library'

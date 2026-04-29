@@ -1,4 +1,4 @@
-# Beacon — LGTM example stack
+# Beacon LGTM example stack
 
 Self-contained Grafana + Tempo + Loki + Mimir + Pyroscope stack for verifying
 Beacon end-to-end on a local machine. No SaaS account required.
@@ -19,8 +19,8 @@ OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 ```
 
 Open Grafana at <http://localhost:3000> (admin / admin) and navigate to the
-**Beacon → Server Health** dashboard. The 7 panels (TPS, MSPT p50/p95/p99, JVM
-memory, GC, threads, players online, CPU) will populate once Beacon starts
+Beacon -> Server Health dashboard. The 7 panels (TPS, MSPT p50/p95/p99, JVM
+memory, GC, threads, players online, CPU) populate once Beacon starts
 exporting.
 
 ## Endpoints
@@ -34,17 +34,17 @@ exporting.
 | Mimir            | <http://localhost:9009>          |
 | Pyroscope        | <http://localhost:4040>          |
 
-All ports are bound to `127.0.0.1` (localhost-only). To expose them to your LAN,
-edit `docker-compose.yml`.
+All ports bind to `127.0.0.1`. Edit `docker-compose.yml` to expose them on
+the LAN.
 
 ## Security
 
-This stack is **local-development only**:
+Local development only:
 
-- Grafana ships with `admin/admin` — change before exposing publicly.
+- Grafana ships with `admin/admin`. Change before exposing publicly.
 - Backends run with auth disabled (single-tenant, local).
-- For production, use a managed LGTM (Grafana Cloud) or harden each component
-  individually.
+- For production, use a managed LGTM (Grafana Cloud) or harden each
+  component individually.
 
 ## Teardown
 
@@ -52,10 +52,4 @@ This stack is **local-development only**:
 docker compose down -v
 ```
 
-The `-v` flag also removes anonymous volumes. Container data is ephemeral —
-restart loses traces/metrics/logs.
-
-## Reference
-
-For the full Beacon quickstart (server install + plugin drop), see the project
-root `README.md`.
+The `-v` flag removes anonymous volumes. Container data is ephemeral.

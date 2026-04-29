@@ -17,16 +17,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Plan 04 — FND-04. Verifies the TPS gauge clamp formula, MSPT histogram unit,
- * world-identity attributes, attribute caching (P4), and the cardinality guard
- * View filter.
- *
- * <p>Tests use the lower-level {@code recordOnce(UUID, String, long)} overload
- * so the Hytale {@code World} / {@code WorldConfig} static initializers are
- * never triggered. Those classes pull asset-store machinery that requires a
- * fully-booted server — out of reach for an instrum unit test.
- */
 class TpsMsptMetricTest {
 
     private InMemoryMetricReader reader;
@@ -48,7 +38,7 @@ class TpsMsptMetricTest {
                 () -> playerSnap);
         this.recorder = new TpsMsptRecorder(metrics,
                 Collections::emptyList,
-                w -> null, // unused — tests call the (UUID, String, long) overload directly
+                w -> null,
                 w -> 0L);
     }
 
@@ -61,7 +51,7 @@ class TpsMsptMetricTest {
     @Test
     void tpsClampsToCeilingAtPerfectTickRate() {
         UUID worldUuid = UUID.randomUUID();
-        recorder.recordOnce(worldUuid, "overworld", 33_333_333L); // 30 TPS exact
+        recorder.recordOnce(worldUuid, "overworld", 33_333_333L);
         Collection<MetricData> data = reader.collectAllMetrics();
 
         long tps = readGauge(data, "hytale.tps");
@@ -74,7 +64,7 @@ class TpsMsptMetricTest {
     @Test
     void tpsReflectsSlowTicks() {
         UUID worldUuid = UUID.randomUUID();
-        recorder.recordOnce(worldUuid, "nether", 66_666_666L); // ~15 TPS
+        recorder.recordOnce(worldUuid, "nether", 66_666_666L);
         long tps = readGauge(reader.collectAllMetrics(), "hytale.tps");
         assertThat(tps).isEqualTo(15L);
     }
@@ -98,15 +88,13 @@ class TpsMsptMetricTest {
 
     @Test
     void cardinalityGuardStripsUnknownAttributes() {
-        // Submit a metric with an attribute not on the allowlist; the View filter
-        // must drop it before it reaches the exporter.
         var meter = openTelemetry.meterBuilder(HytaleMetrics.SCOPE_NAME).build();
         var hist = meter.histogramBuilder("hytale.mspt").setUnit("ns").ofLongs().build();
         hist.record(50_000_000L,
                 io.opentelemetry.api.common.Attributes.builder()
                         .put("hytale.world.uuid", "abc")
                         .put("hytale.world.name", "w")
-                        .put("region", "eu") // <-- must be dropped
+                        .put("region", "eu")
                         .build());
 
         Collection<MetricData> data = reader.collectAllMetrics();
@@ -123,21 +111,17 @@ class TpsMsptMetricTest {
         var first = recorder.attributesFor(id);
         recorder.recordOnce(id, "main", 40_000_000L);
         var second = recorder.attributesFor(id);
-        // Same Attributes instance — proves cache hit (no new allocation per tick).
         assertThat(second).isSameAs(first);
     }
 
     @Test
     void uuidFallbackDeterministicWhenExtractorReturnsNull() {
-        // Determinism: two independent recorders should generate the same fallback
-        // UUID for the same world name.
         String name = "fallback-world";
         UUID expected = UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
         recorder.recordOnce(expected, name, 33_333_333L);
         assertThat(recorder.attributesFor(expected)).isNotNull();
 
-        // Same fallback formula on a fresh recorder yields the same UUID.
         TpsMsptRecorder fresh = new TpsMsptRecorder(metrics,
                 Collections::emptyList,
                 w -> null,

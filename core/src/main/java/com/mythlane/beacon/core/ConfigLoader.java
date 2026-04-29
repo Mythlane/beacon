@@ -8,49 +8,31 @@ import java.util.Map;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
-/**
- * Loads {@link BeaconConfig} with documented precedence env > config.toml > defaults
- * (CONTEXT.md D-04, FND-02).
- *
- * <p>Threat T-1-02-01: rejects config files larger than 1 MB before parsing
- * (DoS via TOML parser).
- */
 public final class ConfigLoader {
 
-    /** Standard OTel env var names. */
     public static final String ENV_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT";
     public static final String ENV_SERVICE_NAME = "OTEL_SERVICE_NAME";
     public static final String ENV_PROTOCOL = "OTEL_EXPORTER_OTLP_PROTOCOL";
 
-    /** TOML keys (mirror env semantics, lower-case dotless under [otel.exporter.otlp]). */
     private static final String FILE_KEY_ENDPOINT = "otel.exporter.otlp.endpoint";
     private static final String FILE_KEY_SERVICE_NAME = "otel.service.name";
     private static final String FILE_KEY_PROTOCOL = "otel.exporter.otlp.protocol";
     private static final String FILE_KEY_QUEUE_MAX_SIZE = "beacon.queue.max_size";
 
-    private static final long MAX_CONFIG_SIZE_BYTES = 1L * 1024L * 1024L; // 1 MB
+    private static final long MAX_CONFIG_SIZE_BYTES = 1024L * 1024L;
 
     private ConfigLoader() {}
 
-    /** Load using ambient process env. */
     public static BeaconConfig load(Path configFile) {
         return load(configFile, System.getenv());
     }
 
-    /**
-     * Load with explicit env map (preferred for tests).
-     *
-     * @param configFile path to {@code config.toml}, may be {@code null} or non-existent
-     * @param env environment variable map (typically {@link System#getenv()})
-     */
     public static BeaconConfig load(Path configFile, Map<String, String> env) {
-        // 1. Defaults
         String endpoint = BeaconConfig.DEFAULT_ENDPOINT;
         String serviceName = BeaconConfig.DEFAULT_SERVICE_NAME;
         String protocol = BeaconConfig.DEFAULT_PROTOCOL;
         int queueMaxSize = BeaconConfig.DEFAULT_QUEUE_MAX_SIZE;
 
-        // 2. Overlay from config.toml (if present and small enough)
         if (configFile != null && Files.isRegularFile(configFile)) {
             try {
                 long size = Files.size(configFile);
@@ -89,7 +71,6 @@ public final class ConfigLoader {
             }
         }
 
-        // 3. Overlay from env (highest precedence)
         if (env != null) {
             String envEndpoint = env.get(ENV_ENDPOINT);
             if (envEndpoint != null && !envEndpoint.isEmpty()) endpoint = envEndpoint;

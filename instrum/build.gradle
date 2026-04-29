@@ -2,31 +2,20 @@ plugins {
     id 'beacon-conventions'
 }
 
-// `instrum` = Hytale-aware metric instruments (TPS, MSPT, players online).
-// Receives data from `binding` event handlers and `TpsMsptRecorder` polling.
-// Depends on `core` for OTel + Hytale SDK (compileOnly only — unit tests
-// exercise the recorder against an InMemoryMetricReader without server JAR).
+// instrum carries Hytale-aware metric instruments (TPS, MSPT, players online).
+// Hytale SDK is compileOnly so unit tests can run without the server JAR.
 
 dependencies {
     implementation project(':core')
 
-    // OTel API + SDK (BOM-managed) — needed to build instruments + register Views.
     implementation platform(libs.otel.bom)
     implementation libs.otel.api
     implementation libs.otel.sdk
 
-    // Hytale Server SDK — compileOnly so unit tests can stub World / HistoricMetric
-    // without pulling the 125 MB server JAR onto the test classpath.
     compileOnly libs.hytale.server
 
-    // Hytale SDK is also needed at test compile time so we can spin up a fake
-    // World via Mockito (deep stubs over WorldConfig + HistoricMetric).
     testImplementation libs.hytale.server
-
-    // OTel SDK testing — InMemoryMetricReader for assertion-grade metric capture.
     testImplementation 'io.opentelemetry:opentelemetry-sdk-testing'
 
     testRuntimeOnly libs.slf4j.simple
 }
-
-

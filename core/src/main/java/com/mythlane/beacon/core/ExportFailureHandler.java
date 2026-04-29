@@ -12,34 +12,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Bounded queue + circuit breaker shared across Beacon exporters (D-08, D-10, PITFALLS P8).
+ * Bounded queue and circuit breaker shared across Beacon exporters.
  *
- * <p>Capacity defaults to {@link BeaconConfig#queueMaxSize()} (16384). When 5 consecutive
- * export failures occur the breaker opens, subsequent {@link #submit()} calls drop, and
- * a WARN log is emitted at most once every 60 seconds. After 60 s the breaker half-opens
- * and one success closes it again.
- *
- * <p>The {@code beacon.export.dropped_total} counter (D-10) is registered against the
- * shared OpenTelemetry meter so admins still see drops once the backend recovers.
+ * <p>When 5 consecutive export failures occur the breaker opens, subsequent
+ * {@link #submit()} calls drop, and a WARN log is emitted at most once every
+ * 60 seconds. After 60 s the breaker half-opens and one success closes it again.
  */
 public final class ExportFailureHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExportFailureHandler.class);
 
-    /** Failures in a row required before the breaker opens. */
     public static final int FAILURE_THRESHOLD = 5;
-    /** Breaker open window before half-open probe (60 s in nanoseconds). */
     public static final long BREAKER_OPEN_NANOS = 60_000_000_000L;
-    /** Minimum interval between WARN logs while breaker is open (60 s). */
     public static final long WARN_THROTTLE_NANOS = 60_000_000_000L;
-
-    /** Public default queue capacity (D-08). */
     public static final int DEFAULT_QUEUE_MAX_SIZE = 16384;
-
-    /** Counter instrument name (D-10). */
     public static final String DROPPED_COUNTER_NAME = "beacon.export.dropped_total";
 
-    /** Circuit breaker states. */
     public enum BreakerState { CLOSED, OPEN, HALF_OPEN }
 
     private final int capacity;
@@ -66,10 +54,6 @@ public final class ExportFailureHandler {
         this.clock = clock;
     }
 
-    /**
-     * Bind to a live {@link OpenTelemetry} so the dropped counter is exported.
-     * Idempotent — second call replaces the counter binding.
-     */
     public void bindMeter(OpenTelemetry openTelemetry) {
         if (openTelemetry == null) return;
         Meter meter = openTelemetry.getMeter("com.mythlane.beacon.export");
@@ -80,18 +64,12 @@ public final class ExportFailureHandler {
         droppedCounter.set(counter);
     }
 
-    /**
-     * Attempt to enqueue an outbound telemetry item.
-     *
-     * @return {@code true} if accepted; {@code false} if dropped (queue full or breaker open).
-     */
     public boolean submit() {
-        // Re-probe breaker for half-open transition.
         maybeHalfOpen();
 
         if (state.get() == BreakerState.OPEN) {
             recordDrop();
-            maybeWarn("circuit breaker open — dropping export");
+            maybeWarn("circuit breaker open, dropping export");
             return false;
         }
         long current = inFlight.get();
@@ -100,25 +78,19 @@ public final class ExportFailureHandler {
             return false;
         }
         if (!inFlight.compareAndSet(current, current + 1)) {
-            // Lost the race; treat as drop to keep semantics simple.
             recordDrop();
             return false;
         }
         return true;
     }
 
-    /** Notify that an in-flight item completed successfully. */
     public void onSuccess() {
         inFlight.updateAndGet(v -> v > 0 ? v - 1 : 0);
         consecutiveFailures.set(0);
-        // HALF_OPEN → CLOSED on a single success.
         state.compareAndSet(BreakerState.HALF_OPEN, BreakerState.CLOSED);
-        // OPEN → CLOSED if for some reason we observe success while open
-        // (shouldn't happen often, but defensive).
         state.compareAndSet(BreakerState.OPEN, BreakerState.CLOSED);
     }
 
-    /** Notify that an in-flight item failed to export. */
     public void onFailure() {
         inFlight.updateAndGet(v -> v > 0 ? v - 1 : 0);
         long failures = consecutiveFailures.incrementAndGet();

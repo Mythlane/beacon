@@ -11,10 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Plan 04 — FND-05. Verifies player-count idempotency, set semantics,
- * thread safety, and per-world cleanup.
- */
 class PlayerCountTest {
 
     @Test
@@ -47,7 +43,7 @@ class PlayerCountTest {
         r.playerJoined(world, p1);
         r.playerJoined(world, p2);
         r.playerLeft(world, p1);
-        r.playerLeft(world, p1); // second leave is a no-op
+        r.playerLeft(world, p1);
         assertThat(r.snapshot(world)).isEqualTo(1L);
     }
 
@@ -57,7 +53,7 @@ class PlayerCountTest {
         UUID world = UUID.randomUUID();
         UUID p1 = UUID.randomUUID();
         r.playerJoined(world, p1);
-        r.playerJoined(world, p1); // set semantics — counted once
+        r.playerJoined(world, p1);
         assertThat(r.snapshot(world)).isEqualTo(1L);
     }
 
@@ -96,7 +92,6 @@ class PlayerCountTest {
         assertThat(done.await(15, TimeUnit.SECONDS)).isTrue();
         pool.shutdownNow();
 
-        // After matched join/leave, no players remain.
         assertThat(r.snapshot(world)).isEqualTo(0L);
     }
 

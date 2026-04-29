@@ -5,13 +5,6 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.sdk.resources.Resource;
 
-/**
- * Augments the OTel autoconfigured {@link Resource} with Beacon-specific attributes.
- *
- * <p>Existing resource attributes are preserved; Beacon attributes are merged in.
- * The version string is sourced from a compile-time constant so the JAR can be
- * verified offline (no reflective version probe).
- */
 final class BeaconResourceProvider {
 
     static final String DISTRO_NAME = "beacon";
@@ -31,7 +24,6 @@ final class BeaconResourceProvider {
         return augment(input, System.getenv(DEPLOYMENT_ENV_VAR));
     }
 
-    /** Package-private overload for tests so env-var injection is deterministic. */
     static Resource augment(Resource input, String deploymentEnvironment) {
         AttributesBuilder builder = Attributes.builder()
             .put(TELEMETRY_DISTRO_NAME, DISTRO_NAME)
@@ -42,10 +34,6 @@ final class BeaconResourceProvider {
         }
 
         Resource beaconResource = Resource.create(builder.build());
-        // Resource.merge: 'other' attributes win on conflict; we want input attributes
-        // to be preserved, but Beacon distro attrs to be added when absent.
-        // Calling input.merge(beaconResource) means beacon attrs overwrite input —
-        // acceptable here because Beacon owns these keys.
         return input.merge(beaconResource);
     }
 }

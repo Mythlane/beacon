@@ -13,12 +13,6 @@ import java.nio.file.Paths;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Validates the auto-provisioned Grafana "Server Health" dashboard JSON
- * (FND-07). Catches structural regressions in panel count, key PromQL queries
- * and the TPS red-threshold value (must be 27, not 18 — Hytale TPS baseline is
- * 30, not 20).
- */
 class DashboardJsonTest {
 
     private static JSONObject dashboard;
@@ -32,7 +26,6 @@ class DashboardJsonTest {
     }
 
     private static Path locateDashboard() {
-        // Run-from-repo-root or run-from-:dist working directories both supported.
         Path[] candidates = new Path[]{
             Paths.get("examples/lgtm-stack/grafana/provisioning/dashboards/server-health.json"),
             Paths.get("../examples/lgtm-stack/grafana/provisioning/dashboards/server-health.json")
@@ -57,28 +50,25 @@ class DashboardJsonTest {
     void dashboardHasExactlySevenPanels() {
         JSONArray panels = dashboard.getJSONArray("panels");
         assertThat(panels.length())
-            .as("FND-07 requires exactly 7 panels (TPS, MSPT, JVM Memory, GC, Threads, Players, CPU)")
+            .as("Dashboard requires exactly 7 panels (TPS, MSPT, JVM Memory, GC, Threads, Players, CPU)")
             .isEqualTo(7);
     }
 
     @Test
     void dashboardReferencesAllRequiredMetrics() {
-        // Cheaper than walking every panel/target — the metric names are unique
-        // enough that a substring search is reliable and easy to debug.
         assertThat(rawJson)
             .as("TPS panel must query hytale_tps")
             .contains("hytale_tps");
         assertThat(rawJson)
             .as("MSPT panel must query the hytale_mspt histogram")
-            .contains("hytale_mspt_bucket");
+            .contains("hytale_mspt_nanoseconds_bucket");
         assertThat(rawJson)
             .as("Players panel must query hytale_players_online")
             .contains("hytale_players_online");
 
-        // At least 2 distinct process_runtime_jvm_* metrics (memory + gc + threads).
-        long jvmMetricMatches = countOccurrences(rawJson, "process_runtime_jvm_");
+        long jvmMetricMatches = countOccurrences(rawJson, "jvm_");
         assertThat(jvmMetricMatches)
-            .as("Dashboard must reference at least 2 process_runtime_jvm_* metrics")
+            .as("Dashboard must reference at least 2 jvm_* metrics")
             .isGreaterThanOrEqualTo(2);
     }
 
@@ -108,8 +98,6 @@ class DashboardJsonTest {
         for (int i = 0; i < steps.length(); i++) {
             JSONObject step = steps.getJSONObject(i);
             String color = step.optString("color");
-            // value may be JSONObject.NULL for the lowest step
-            Object value = step.has("value") ? step.get(JSONObject.NULL.equals(step.get("value")) ? "value" : "value") : null;
             if ("red".equalsIgnoreCase(color)) {
                 foundRedStep = true;
             }
@@ -118,10 +106,10 @@ class DashboardJsonTest {
             }
         }
         assertThat(foundRedStep)
-            .as("TPS panel thresholds must contain a red step (below 27 TPS = critical)")
+            .as("TPS panel thresholds must contain a red step")
             .isTrue();
         assertThat(foundYellowAt27)
-            .as("TPS panel must have a threshold step at value 27 (NOT 18 — Hytale TPS baseline is 30)")
+            .as("TPS panel must have a threshold step at 27")
             .isTrue();
     }
 

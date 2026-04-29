@@ -11,41 +11,22 @@ import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.ObservableLongGauge;
 
 /**
- * Builds Beacon's three Hytale-native instruments (FND-04, FND-05):
- *
- * <ul>
- *   <li>{@code hytale.mspt} — {@link LongHistogram}, unit "ns", recorded by
- *       {@link TpsMsptRecorder} on each polling tick.</li>
- *   <li>{@code hytale.tps} — {@link ObservableLongGauge}, unit "1/s",
- *       callback reads the latest cached TPS per world.</li>
- *   <li>{@code hytale.players.online} — {@link ObservableLongGauge}, unit "1",
- *       callback reads {@link PlayerCountRegistry#snapshot(UUID)}.</li>
- * </ul>
- *
- * <p>The two gauges run on the OTel reader thread (T-1-04-02 boundary).
- * Their callbacks must be allocation-free and thread-safe — both data sources
- * here use snapshots backed by {@link java.util.concurrent.ConcurrentHashMap}.
- *
- * <p>Cardinality safety (R9 / T-1-04-01) is enforced upstream by
- * {@link CardinalityGuard} on the {@link io.opentelemetry.sdk.metrics.SdkMeterProvider};
- * this class only emits {@code hytale.world.uuid} + {@code hytale.world.name}
- * attributes.
+ * Builds {@code hytale.mspt} (histogram, ns), {@code hytale.tps} (observable
+ * gauge, 1/s) and {@code hytale.players.online} (observable gauge). Gauge
+ * callbacks run on the OTel reader thread and must stay allocation-free and
+ * thread-safe; data sources are {@link java.util.concurrent.ConcurrentHashMap}
+ * snapshots. Cardinality is enforced upstream by {@link CardinalityGuard} so
+ * only {@code hytale.world.uuid} and {@code hytale.world.name} attributes are
+ * emitted.
  */
 public final class HytaleMetrics implements AutoCloseable {
 
-    /** Instrumentation scope name — appears in OTel resource attributes. */
     public static final String SCOPE_NAME = "com.mythlane.beacon.instrum";
 
     private final LongHistogram msptHistogram;
     private final ObservableLongGauge tpsGauge;
     private final ObservableLongGauge playersGauge;
 
-    /**
-     * @param openTelemetry OTel root for instrument registration.
-     * @param tpsSnapshotProvider supplies the current per-world (Attributes, latest TPS) map.
-     *                            The recorder feeds this map.
-     * @param playerSnapshotProvider supplies the current per-world (Attributes, online count) map.
-     */
     public HytaleMetrics(OpenTelemetry openTelemetry,
                          Supplier<Map<UUID, WorldSample>> tpsSnapshotProvider,
                          Supplier<Map<UUID, WorldSample>> playerSnapshotProvider) {
@@ -82,7 +63,6 @@ public final class HytaleMetrics implements AutoCloseable {
                 });
     }
 
-    /** Records one MSPT data point against {@code hytale.mspt}. */
     public void recordMspt(long nanos, Attributes attributes) {
         msptHistogram.record(nanos, attributes);
     }
@@ -93,6 +73,5 @@ public final class HytaleMetrics implements AutoCloseable {
         try { playersGauge.close(); } catch (Throwable ignored) {}
     }
 
-    /** Pair of pre-built {@link Attributes} and a current value, used by gauge callbacks. */
     public record WorldSample(Attributes attributes, long value) {}
 }

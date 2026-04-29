@@ -6,32 +6,16 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-// `dist` = fat-JAR assembly with shading rules (Plan 01-05).
-//
-// We bundle core + instrum + binding into a single shaded JAR consumable as a
-// Hytale plugin via the D-12 install path. agent-ext is intentionally excluded
-// — it ships as a separate JAR (per CLAUDE.md "OTel Java Agent Extension
-// Pattern").
-//
-// All io.opentelemetry / io.grpc / com.google.protobuf / io.netty / okhttp3 /
-// okio / io.perfmark classes are relocated under com.mythlane.beacon.shaded.*
-// to avoid version collisions with Hytale-bundled libraries (PITFALLS P3:
-// Hytale ships protobuf 4.33.0 + Netty 4.x; exact major+minor overlap with
-// OTel's gRPC exporter would produce ClassCastException at runtime).
-//
-// `mergeServiceFiles()` preserves the OTel autoconfigure SPI registrations
-// that Shadow would otherwise overwrite when collapsing META-INF/services
-// across the OTel BOM artifacts.
-//
-// CI gates `checkShading` and `verifyServiceFiles` (registered below) fail
-// the build on any regression.
+// dist bundles core + instrum + binding into a shaded fat JAR consumable as a
+// Hytale plugin. agent-ext is excluded because the OTel Java Agent loads
+// extensions through its own classloader. Relocations defend against version
+// collisions with Hytale-bundled protobuf 4.33.0 and Netty 4.x.
 
 dependencies {
     implementation project(':core')
     implementation project(':instrum')
     implementation project(':binding')
 
-    // JSON parsing for DashboardJsonTest (validates Server Health dashboard JSON).
     testImplementation 'org.json:json:20240303'
 }
 
@@ -40,10 +24,8 @@ tasks.named('shadowJar') {
     archiveVersion.set('0.1.0-alpha')
     archiveClassifier.set('')
 
-    // Preserve OTel autoconfigure SPI files (PITFALLS P3 / R2).
     mergeServiceFiles()
 
-    // 6 (+1) relocations — see CLAUDE.md "Concrete relocate() directives".
     relocate 'io.opentelemetry',     'com.mythlane.beacon.shaded.otel'
     relocate 'io.grpc',              'com.mythlane.beacon.shaded.grpc'
     relocate 'com.google.protobuf',  'com.mythlane.beacon.shaded.protobuf'
@@ -51,25 +33,19 @@ tasks.named('shadowJar') {
     relocate 'okhttp3',              'com.mythlane.beacon.shaded.okhttp3'
     relocate 'okio',                 'com.mythlane.beacon.shaded.okio'
     relocate 'io.perfmark',          'com.mythlane.beacon.shaded.perfmark'
-
-    // NOTE: do NOT relocate com.mythlane.beacon.* (own code) or
-    // com.hypixel.hytale.* (server SDK — provided at runtime by Hytale).
+    // Do NOT relocate com.mythlane.beacon.* or com.hypixel.hytale.* (Hytale
+    // provides the server SDK at runtime).
 }
 
-// Make `gradle build` produce the shaded JAR.
 tasks.named('build') {
     dependsOn tasks.named('shadowJar')
 }
-
-// --------------------------------------------------------------------------
-// CI gates: checkShading + verifyServiceFiles (R1, R2)
-// --------------------------------------------------------------------------
 
 def unshadedRegex = ~$/^(io/opentelemetry|io/grpc|com/google/protobuf|io/netty|okhttp3|okio|io/perfmark)/.*\.class$/$
 
 tasks.register('checkShading') {
     group = 'verification'
-    description = 'Fails the build if the shaded JAR contains any unrelocated io.* / com.google.protobuf / okhttp3 / okio class (R1).'
+    description = 'Fails the build if the shaded JAR contains any unrelocated io.* / com.google.protobuf / okhttp3 / okio class.'
     dependsOn tasks.named('shadowJar')
 
     doLast {
@@ -91,7 +67,7 @@ tasks.register('checkShading') {
             def preview = offenders.take(20).join('\n  ')
             throw new GradleException(
                 "checkShading FAILED: " + offenders.size() + " unrelocated classes found in " + jarFile.name + ".\n" +
-                "These packages must be relocated under com.mythlane.beacon.shaded.* (PITFALLS P3).\n" +
+                "These packages must be relocated under com.mythlane.beacon.shaded.*.\n" +
                 "First offenders:\n  " + preview
             )
         }
@@ -101,7 +77,7 @@ tasks.register('checkShading') {
 
 tasks.register('verifyServiceFiles') {
     group = 'verification'
-    description = 'Asserts the shaded JAR preserves OTel autoconfigure SPI registrations (R2).'
+    description = 'Asserts the shaded JAR preserves OTel autoconfigure SPI registrations.'
     dependsOn tasks.named('shadowJar')
 
     doLast {
@@ -110,13 +86,9 @@ tasks.register('verifyServiceFiles') {
             throw new GradleException("verifyServiceFiles: shadow JAR not found at " + jarFile)
         }
 
-        // Shadow rewrites both the path AND contents of META-INF/services files
-        // when relocate() applies. We require that the OTel autoconfigure SPI
-        // ecosystem is preserved post-merge — at minimum the ConfigurableMetric/
-        // Span/LogRecord ExporterProviders, ResourceProvider, and ComponentProvider
-        // (these are the actual provider SPIs the OTel SDK loads; the
-        // AutoConfigurationCustomizerProvider SPI exists only if a user installs
-        // a customizer extension JAR, so it is NOT a reliable witness).
+        // Shadow rewrites both the path and contents of META-INF/services entries
+        // when relocate() applies. AutoConfigurationCustomizerProvider only exists
+        // when a customizer extension JAR is on the classpath, so it is excluded.
         def requiredSpiSuffixes = [
             'sdk.autoconfigure.spi.ResourceProvider',
             'sdk.autoconfigure.spi.internal.ComponentProvider',
@@ -155,14 +127,13 @@ tasks.register('verifyServiceFiles') {
             throw new GradleException(
                 "verifyServiceFiles FAILED: required OTel autoconfigure SPI file(s) missing from " + jarFile.name + ".\n" +
                 "Missing suffixes:\n  - " + missing.join('\n  - ') + "\n" +
-                "mergeServiceFiles may have been removed from shadowJar config (R2)."
+                "mergeServiceFiles may have been removed from shadowJar config."
             )
         }
         logger.lifecycle("verifyServiceFiles PASSED: " + foundPaths.size() + " OTel autoconfigure SPI files preserved in " + jarFile.name)
     }
 }
 
-// Wire both gates into ./gradlew check.
 tasks.named('check') {
     dependsOn 'checkShading', 'verifyServiceFiles'
 }

@@ -13,9 +13,6 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Covers FND-02 (config precedence: env > file > default) per Plan 02 Task 1 behaviors.
- */
 class ConfigPrecedenceTest {
 
     private static Path writeToml(Path dir, String content) throws IOException {
@@ -64,7 +61,6 @@ class ConfigPrecedenceTest {
     @Test
     void rejectsOversizedConfigFile(@TempDir Path tmp) throws IOException {
         Path file = tmp.resolve("config.toml");
-        // > 1 MB
         byte[] big = new byte[(int) (1L * 1024L * 1024L + 1)];
         Files.write(file, big);
 

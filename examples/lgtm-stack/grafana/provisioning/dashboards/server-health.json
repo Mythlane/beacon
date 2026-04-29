@@ -55,7 +55,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "min(hytale_tps) by (hytale_world_name)",
+          "expr": "min(hytale_tps_per_second) by (hytale_world_name)",
           "legendFormat": "{{hytale_world_name}}"
         }
       ]
@@ -78,19 +78,19 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "histogram_quantile(0.50, sum(rate(hytale_mspt_bucket[1m])) by (le, hytale_world_name))",
+          "expr": "histogram_quantile(0.50, sum(rate(hytale_mspt_nanoseconds_bucket[1m])) by (le, hytale_world_name))",
           "legendFormat": "p50 — {{hytale_world_name}}"
         },
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "histogram_quantile(0.95, sum(rate(hytale_mspt_bucket[1m])) by (le, hytale_world_name))",
+          "expr": "histogram_quantile(0.95, sum(rate(hytale_mspt_nanoseconds_bucket[1m])) by (le, hytale_world_name))",
           "legendFormat": "p95 — {{hytale_world_name}}"
         },
         {
           "refId": "C",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "histogram_quantile(0.99, sum(rate(hytale_mspt_bucket[1m])) by (le, hytale_world_name))",
+          "expr": "histogram_quantile(0.99, sum(rate(hytale_mspt_nanoseconds_bucket[1m])) by (le, hytale_world_name))",
           "legendFormat": "p99 — {{hytale_world_name}}"
         }
       ]
@@ -116,7 +116,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "sum(process_runtime_jvm_memory_usage_bytes) by (type)",
+          "expr": "sum(jvm_memory_used_bytes) by (jvm_memory_type, jvm_memory_pool_name)",
           "legendFormat": "{{type}}"
         }
       ]
@@ -146,13 +146,13 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "rate(process_runtime_jvm_gc_duration_seconds_sum[5m])",
+          "expr": "rate(jvm_gc_duration_seconds_sum[5m])",
           "legendFormat": "pause — {{gc}}"
         },
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "rate(process_runtime_jvm_gc_duration_seconds_count[5m])",
+          "expr": "rate(jvm_gc_duration_seconds_count[5m])",
           "legendFormat": "freq — {{gc}}"
         }
       ]
@@ -187,7 +187,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "process_runtime_jvm_threads_count",
+          "expr": "jvm_thread_count",
           "legendFormat": "threads"
         }
       ]
@@ -214,7 +214,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "sum(hytale_players_online) by (hytale_world_name)",
+          "expr": "sum(hytale_players_online_ratio) by (hytale_world_name)",
           "legendFormat": "{{hytale_world_name}}"
         }
       ]
@@ -251,7 +251,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "process_cpu_utilization * 100",
+          "expr": "jvm_cpu_recent_utilization_ratio * 100",
           "legendFormat": "cpu"
         }
       ]

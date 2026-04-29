@@ -17,19 +17,12 @@ import java.util.zip.ZipFile;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Programmatic mirror of the {@code checkShading} + {@code verifyServiceFiles}
- * Gradle tasks. Provides a stable JUnit entry point so the same R1/R2 gates
- * can be invoked from {@code ./gradlew :dist:test}, IDE test runners, and
- * any future integration harness.
- *
- * <p>Each test is gated on the shaded JAR existing at the expected path —
- * running {@code :dist:test} alone (without {@code :dist:shadowJar} first)
- * would otherwise fail spuriously. The Gradle task graph wires the JAR
- * production into {@code check} via the custom tasks above.
+ * Programmatic mirror of {@code checkShading} and {@code verifyServiceFiles}
+ * for {@code ./gradlew :dist:test} and IDE runners. Tests are gated on the
+ * shaded JAR existing.
  */
 class ShadingCheckTest {
 
-    /** Set of top-level package prefixes that MUST be relocated. */
     private static final Pattern UNSHADED = Pattern.compile(
         "^(io/opentelemetry|io/grpc|com/google/protobuf|io/netty|okhttp3|okio|io/perfmark)/.*\\.class$"
     );
@@ -48,7 +41,6 @@ class ShadingCheckTest {
     }
 
     private static Path locateJar() {
-        // Run-from-repo-root or run-from-:dist working directories both supported.
         Path[] candidates = new Path[]{
             Paths.get("dist/build/libs/beacon-0.1.0-alpha.jar"),
             Paths.get("build/libs/beacon-0.1.0-alpha.jar")
@@ -85,21 +77,18 @@ class ShadingCheckTest {
         }
         assertThat(offenders)
             .as("No unrelocated classes may appear under io/opentelemetry, io/grpc, "
-                + "com/google/protobuf, io/netty, okhttp3, okio, io/perfmark (R1, PITFALLS P3)")
+                + "com/google/protobuf, io/netty, okhttp3, okio, io/perfmark")
             .isEmpty();
     }
 
     @Test
     @EnabledIf("jarAvailable")
     void shadedCopiesPresent() throws IOException {
-        // The OTel exporter currently pulled by core is opentelemetry-exporter-otlp,
-        // which (in 1.61.0) uses OkHttp by default for HTTP/protobuf transport — it
-        // does NOT pull io.grpc / io.netty / com.google.protobuf transitively unless
-        // the gRPC sub-artifact is wired explicitly. The relocate directives for
-        // those packages stay in dist/build.gradle as DEFENSIVE rules so a future
-        // dependency change (e.g. switching to opentelemetry-exporter-otlp-grpc)
-        // can't accidentally ship Hytale-conflicting classes. We assert here only
-        // on the prefixes that the current dep graph actually populates.
+        // opentelemetry-exporter-otlp uses OkHttp by default and does not pull
+        // io.grpc / io.netty / com.google.protobuf transitively; the relocate
+        // directives for those packages stay defensive in dist/build.gradle so
+        // a future dependency switch can't accidentally ship Hytale-conflicting
+        // classes. Only the currently-populated prefixes are asserted here.
         List<String> requiredPopulated = List.of(
             SHADED_PREFIX + "otel/",
             SHADED_PREFIX + "okhttp3/",
@@ -124,11 +113,10 @@ class ShadingCheckTest {
     @Test
     @EnabledIf("jarAvailable")
     void otelAutoconfigureSpiFilesPresent() throws IOException {
-        // The OTel SDK loads these SPI providers at boot via ServiceLoader; if
-        // any are missing post-Shadow merge the SDK can't resolve exporters or
-        // resource providers (R2, PITFALLS P3). AutoConfigurationCustomizerProvider
-        // is intentionally NOT in the list — it only exists when a customizer
-        // extension JAR is on the classpath, so it's unreliable as a witness.
+        // The OTel SDK loads these SPI providers via ServiceLoader; missing
+        // entries break exporter/resource resolution after Shadow merge.
+        // AutoConfigurationCustomizerProvider is excluded because it only
+        // exists when a customizer extension JAR is on the classpath.
         List<String> requiredSuffixes = List.of(
             "sdk.autoconfigure.spi.ResourceProvider",
             "sdk.autoconfigure.spi.internal.ComponentProvider",
@@ -156,7 +144,7 @@ class ShadingCheckTest {
             }
         }
         assertThat(missing)
-            .as("All required OTel autoconfigure SPI files must be preserved post-Shadow merge (R2)")
+            .as("All required OTel autoconfigure SPI files must be preserved post-Shadow merge")
             .isEmpty();
     }
 }
