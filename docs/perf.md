@@ -152,9 +152,23 @@ them when citing these results.
 
 Future benchmark work tracked against the roadmap.
 
-- **End-to-end QUIC overhead bench** - unblocks when Hytale server
-  packet IDs are public. Existing `OverheadHarness` and
-  `SessionSequence` ready, gated only on protocol confirmation.
+- **End-to-end QUIC overhead bench** - deferred to v0.2. The
+  `OverheadHarness` and `SessionSequence` scaffolding is in place, but
+  three protocol-level mismatches block live runs against the Hytale
+  server (validated 2026.03.26-89796e57b):
+  - All 7 placeholder packet IDs in `SessionSequence.java` are wrong
+    (real IDs are decimal `int`, not 16-bit hex; correct mapping known
+    internally).
+  - Keepalive is reactive, not periodic: server emits `Ping`, bot must
+    `Pong` in reply. Current 1Hz timer-driven `stepKeepalive` will
+    desync.
+  - `Connect` packet has a 46-byte fixed payload schema. The current
+    `new byte[]{0x01}` placeholder fails server-side `validateStructure`.
+
+  Fix is non-trivial (~10-15h estimated, primarily payload schema
+  reconstruction). End-to-end results will land in `docs/perf-quic.md`
+  once unblocked. Release criterion 1.10 is met via the JMH harness; the
+  QUIC end-to-end is a refinement, not a blocker.
 - **Burst behavior + cascade breaker** (Phase 3.2) - simulate a 10 Hz
   submission peak to validate that `ExportFailureHandler.submit()` and
   the breaker transition path stay bounded under spike load.
