@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * 3-run median overhead bench used as a release gate. For each run, launches
  * {@code HytaleServer.jar} once with Beacon and once without, samples CPU and
  * RSS every second after a 30s warmup, then writes the median delta to
- * {@code docs/perf.md}. Exits 1 when median CPU is at least 1.5% (giving 0.5%
+ * {@code docs/perf-quic.md}. Exits 1 when median CPU is at least 1.5% (giving 0.5%
  * noise headroom over the 1% target) or memory overhead is at least 50 MB.
  */
 public final class OverheadHarness {

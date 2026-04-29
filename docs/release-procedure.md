@@ -33,7 +33,7 @@ Outputs:
 ```
 
 Confirm the median CPU printed by `OverheadHarness` (and recorded in
-`docs/perf.md`) is < 1% at 20 players / 10 minutes / 3-run median.
+`docs/perf-quic.md`) is < 1% at 20 players / 10 minutes / 3-run median.
 
 The CI bench gate uses 1.5% as a build blocker for noise. The release gate
 is 1.0% hard fail. If the bench lands between 1.0% and 1.5%, abort the

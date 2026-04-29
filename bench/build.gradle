@@ -232,7 +232,7 @@ tasks.register('overheadBench', JavaExec) {
     def players = (findProperty('bench.players') ?: '20')
     def duration = (findProperty('bench.duration') ?: '600')
     def runs = (findProperty('bench.runs') ?: '3')
-    def report = (findProperty('bench.report') ?: rootProject.file('docs/perf.md').absolutePath)
+    def report = (findProperty('bench.report') ?: rootProject.file('docs/perf-quic.md').absolutePath)
     args = [
             '--mode=overhead',
             '--target=' + target,

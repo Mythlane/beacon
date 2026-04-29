@@ -51,7 +51,7 @@ into a single viewer.
 - Vendor-neutral OTLP export (gRPC default; HTTP/protobuf override via
   `OTEL_EXPORTER_OTLP_PROTOCOL`).
 - < 1% CPU overhead measured at 20 simulated players over 10 minutes
-  (release-blocker bench, 3-run median, see [`docs/perf.md`](docs/perf.md)).
+  (release-blocker bench, 3-run median, see [`docs/perf-quic.md`](docs/perf-quic.md)).
 
 ---
 

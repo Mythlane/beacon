@@ -18,7 +18,7 @@ public final class BenchMain {
         int players = 20;
         int duration = 600;
         int runs = 3;
-        Path report = Paths.get("docs", "perf.md");
+        Path report = Paths.get("docs", "perf-quic.md");
 
         for (String a : args) {
             if (a.startsWith("--mode=")) mode = a.substring(7);
