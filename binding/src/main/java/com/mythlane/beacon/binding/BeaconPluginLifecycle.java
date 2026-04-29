@@ -3,7 +3,14 @@ package com.mythlane.beacon.binding;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -12,9 +19,14 @@ import com.mythlane.beacon.core.BeaconConfig;
 import com.mythlane.beacon.core.ConfigLoader;
 import com.mythlane.beacon.core.ExportFailureHandler;
 import com.mythlane.beacon.core.OpenTelemetryFactory;
+import com.mythlane.beacon.instrum.CardinalityGuard;
+import com.mythlane.beacon.instrum.HytaleMetrics;
+import com.mythlane.beacon.instrum.PlayerCountRegistry;
+import com.mythlane.beacon.instrum.TpsMsptRecorder;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 import org.slf4j.Logger;
@@ -45,6 +57,9 @@ public final class BeaconPluginLifecycle {
     /** Flush budget at shutdown (PITFALLS P7). */
     public static final long SHUTDOWN_FLUSH_TIMEOUT_SECONDS = 5L;
 
+    /** Polling cadence for {@link TpsMsptRecorder} (FND-04: every 30s). */
+    public static final long POLL_PERIOD_SECONDS = 30L;
+
     private final Path configPath;
     private final Supplier<List<String>> jvmInputArgsSupplier;
     private final Supplier<OpenTelemetry> globalProbe;
@@ -55,6 +70,28 @@ public final class BeaconPluginLifecycle {
     private volatile ExportFailureHandler failureHandler;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private volatile Thread shutdownHook;
+
+    /**
+     * Source of the plugin-scoped {@code IEventRegistry}. {@link BeaconPlugin}
+     * wires this via {@link #setEventRegistrySource(Supplier)} after super-construction
+     * (the registry is owned by {@code PluginBase}). Tests inject a Mockito mock.
+     */
+    private volatile Supplier<com.hypixel.hytale.event.IEventRegistry> eventRegistrySource;
+
+    /**
+     * Optional override for the polling scheduler. {@link #resolveScheduledExecutor()}
+     * defaults to {@code HytaleServer.SCHEDULED_EXECUTOR}; tests inject a fake.
+     */
+    private volatile Supplier<ScheduledExecutorService> schedulerSource;
+
+    // Plan 04 — metric wiring.
+    private volatile HytaleMetrics hytaleMetrics;
+    private volatile PlayerCountRegistry playerCountRegistry;
+    private volatile TpsMsptRecorder tpsMsptRecorder;
+    private volatile EventBindings eventBindings;
+    private volatile ScheduledExecutorService pollerExecutor;
+    private volatile ScheduledFuture<?> pollerFuture;
+    private volatile boolean ownsPollerExecutor;
 
     public BeaconPluginLifecycle() {
         this(DEFAULT_CONFIG_PATH,
@@ -100,11 +137,37 @@ public final class BeaconPluginLifecycle {
     public void start() {
         try {
             if (config == null) config = BeaconConfig.defaults();
-            this.openTelemetry = OpenTelemetryFactory.createOrAdopt(config, globalProbe, registerAsGlobal);
+            this.openTelemetry = OpenTelemetryFactory.createOrAdopt(
+                    config, globalProbe, registerAsGlobal,
+                    CardinalityGuard::install);
             LOG.info("Beacon OpenTelemetry SDK ready: {}", openTelemetry.getClass().getName());
 
             this.failureHandler = new ExportFailureHandler(config.queueMaxSize(), System::nanoTime);
             failureHandler.bindMeter(openTelemetry);
+
+            // --- Plan 04: hytale.tps / hytale.mspt / hytale.players.online wiring ----
+            this.playerCountRegistry = new PlayerCountRegistry();
+            this.hytaleMetrics = new HytaleMetrics(
+                    openTelemetry,
+                    () -> tpsMsptRecorder == null ? Map.of() : tpsMsptRecorder.tpsSnapshot(),
+                    () -> playerCountSnapshot());
+            this.tpsMsptRecorder = TpsMsptRecorder.forProduction(hytaleMetrics);
+            this.eventBindings = new EventBindings(playerCountRegistry);
+            try {
+                eventBindings.register(getEventRegistryFromHytale());
+            } catch (Throwable t) {
+                LOG.warn("Beacon could not register Hytale player events; players.online will stay at 0", t);
+            }
+
+            // Resolve the scheduler — prefer HytaleServer.SCHEDULED_EXECUTOR if accessible.
+            ScheduledExecutorService scheduler = resolveScheduledExecutor();
+            this.pollerExecutor = scheduler;
+            this.pollerFuture = scheduler.scheduleAtFixedRate(
+                    () -> {
+                        try { tpsMsptRecorder.recordAll(); }
+                        catch (Throwable t) { LOG.warn("Beacon poller tick failed", t); }
+                    },
+                    POLL_PERIOD_SECONDS, POLL_PERIOD_SECONDS, TimeUnit.SECONDS);
 
             // PITFALLS P2 / R5: warn if -javaagent is not attached.
             try {
@@ -139,7 +202,20 @@ public final class BeaconPluginLifecycle {
         if (!closed.compareAndSet(false, true)) {
             return; // Already shut down.
         }
+        // Cancel the recorder poller BEFORE the flush so no new metric points race the flush.
+        ScheduledFuture<?> f = this.pollerFuture;
+        if (f != null) {
+            try { f.cancel(false); } catch (Throwable ignored) {}
+            this.pollerFuture = null;
+        }
+        if (ownsPollerExecutor && pollerExecutor != null) {
+            try { pollerExecutor.shutdownNow(); } catch (Throwable ignored) {}
+        }
         try {
+            HytaleMetrics m = this.hytaleMetrics;
+            if (m != null) {
+                try { m.close(); } catch (Throwable ignored) {}
+            }
             if (openTelemetry instanceof OpenTelemetrySdk sdk) {
                 try {
                     sdk.getSdkTracerProvider().forceFlush().join(SHUTDOWN_FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -186,4 +262,58 @@ public final class BeaconPluginLifecycle {
     public OpenTelemetry openTelemetry() { return openTelemetry; }
     public BeaconConfig config() { return config; }
     public ExportFailureHandler failureHandler() { return failureHandler; }
+    public PlayerCountRegistry playerCountRegistry() { return playerCountRegistry; }
+    public TpsMsptRecorder tpsMsptRecorder() { return tpsMsptRecorder; }
+    public EventBindings eventBindings() { return eventBindings; }
+    public ScheduledFuture<?> pollerFuture() { return pollerFuture; }
+
+    public void setEventRegistrySource(Supplier<com.hypixel.hytale.event.IEventRegistry> src) {
+        this.eventRegistrySource = src;
+    }
+
+    public void setSchedulerSource(Supplier<ScheduledExecutorService> src) {
+        this.schedulerSource = src;
+    }
+
+    private com.hypixel.hytale.event.IEventRegistry getEventRegistryFromHytale() {
+        Supplier<com.hypixel.hytale.event.IEventRegistry> src = this.eventRegistrySource;
+        if (src == null) {
+            throw new IllegalStateException("No event registry source wired — BeaconPlugin.setup() should call setEventRegistrySource()");
+        }
+        return src.get();
+    }
+
+    private ScheduledExecutorService resolveScheduledExecutor() {
+        Supplier<ScheduledExecutorService> src = this.schedulerSource;
+        if (src != null) {
+            ScheduledExecutorService s = src.get();
+            if (s != null) {
+                ownsPollerExecutor = false;
+                return s;
+            }
+        }
+        // Note: production wiring sets schedulerSource to
+        // {@code () -> HytaleServer.SCHEDULED_EXECUTOR} via {@link BeaconPlugin#start()}
+        // — done there (not here) so unit/integration tests that don't stand up
+        // {@code HytaleServer} don't trigger its static initialization side-effects.
+        ownsPollerExecutor = true;
+        ThreadFactory tf = r -> {
+            Thread t = new Thread(r, "beacon-poller");
+            t.setDaemon(true);
+            return t;
+        };
+        return Executors.newSingleThreadScheduledExecutor(tf);
+    }
+
+    /** Build the player-count snapshot map fed to {@link HytaleMetrics}'s gauge callback. */
+    private Map<UUID, HytaleMetrics.WorldSample> playerCountSnapshot() {
+        if (playerCountRegistry == null || tpsMsptRecorder == null) return Map.of();
+        Map<UUID, HytaleMetrics.WorldSample> out = new HashMap<>();
+        for (UUID worldUuid : playerCountRegistry.trackedWorlds()) {
+            Attributes attrs = tpsMsptRecorder.attributesFor(worldUuid);
+            if (attrs == null) continue; // world not yet polled — skip until we have stable attrs
+            out.put(worldUuid, new HytaleMetrics.WorldSample(attrs, playerCountRegistry.snapshot(worldUuid)));
+        }
+        return out;
+    }
 }

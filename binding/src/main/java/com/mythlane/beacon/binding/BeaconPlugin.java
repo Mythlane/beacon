@@ -1,5 +1,6 @@
 package com.mythlane.beacon.binding;
 
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 
@@ -24,6 +25,12 @@ public final class BeaconPlugin extends JavaPlugin {
 
     public BeaconPlugin(JavaPluginInit init) {
         super(init);
+        // Wire the plugin-scoped event registry into the lifecycle delegate so
+        // EventBindings.register() can attach the player join/leave handlers.
+        // PluginBase owns the registry; we expose it via getEventRegistry().
+        lifecycle.setEventRegistrySource(this::getEventRegistry);
+        // Use the Hytale-owned scheduler so polling joins existing JVM-thread budgeting.
+        lifecycle.setSchedulerSource(() -> HytaleServer.SCHEDULED_EXECUTOR);
     }
 
     @Override

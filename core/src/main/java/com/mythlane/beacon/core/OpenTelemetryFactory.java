@@ -7,6 +7,8 @@ import java.util.function.Supplier;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
+import java.util.function.UnaryOperator;
 
 /**
  * Builds or adopts the OpenTelemetry SDK using the defensive probe pattern
@@ -50,6 +52,20 @@ public final class OpenTelemetryFactory {
     public static OpenTelemetry createOrAdopt(BeaconConfig config,
                                               Supplier<OpenTelemetry> globalProbe,
                                               boolean registerAsGlobal) {
+        return createOrAdopt(config, globalProbe, registerAsGlobal, b -> b);
+    }
+
+    /**
+     * Full-control entry point allowing callers to customize the
+     * {@link SdkMeterProviderBuilder} (e.g. {@link com.mythlane.beacon.instrum
+     * package} registers cardinality-guard Views here). The customizer is
+     * applied via {@code AutoConfiguredOpenTelemetrySdkBuilder
+     * .addMeterProviderCustomizer}.
+     */
+    public static OpenTelemetry createOrAdopt(BeaconConfig config,
+                                              Supplier<OpenTelemetry> globalProbe,
+                                              boolean registerAsGlobal,
+                                              UnaryOperator<SdkMeterProviderBuilder> meterProviderCustomizer) {
         try {
             OpenTelemetry global = globalProbe.get();
             if (global != null) {
@@ -70,7 +86,8 @@ public final class OpenTelemetryFactory {
             propMap.put("otel.logs.exporter", "none");
 
             var builder = AutoConfiguredOpenTelemetrySdk.builder()
-                    .addPropertiesSupplier(() -> propMap);
+                    .addPropertiesSupplier(() -> propMap)
+                    .addMeterProviderCustomizer((mpb, props) -> meterProviderCustomizer.apply(mpb));
             if (registerAsGlobal) {
                 builder = builder.setResultAsGlobal();
             }
