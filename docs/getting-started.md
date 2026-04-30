@@ -91,7 +91,7 @@ name = "hytale-server-dev"
 ```
 
 Precedence is **environment variables > config file > built-in defaults**.
-Configuration details: [`configuration.md`](configuration.md) (à venir).
+Configuration details: [`configuration.md`](configuration.md).
 
 ## Step 4 - Boot the server (~60s)
 
@@ -124,8 +124,6 @@ runtime you should see seven panels populated:
 - Players online per world
 - CPU utilization
 
-![Server Health dashboard](TODO: screenshot once stack is smoke-tested)
-
 ## Troubleshooting
 
 **"No data" in every Grafana panel.** Verify the stack is up
@@ -145,10 +143,12 @@ time to find the conflict.
 e.g. `127.0.0.1:3001:3000` or `127.0.0.1:4327:4317`. Update
 `OTEL_EXPORTER_OTLP_ENDPOINT` to match the new OTLP port.
 
-**Logs show "Beacon active but exporting to ..." yet no data appears.**
-Clock skew. Mimir rejects samples that are too far in the past or
-future. Run `w32tm /query /status` (Windows) or `timedatectl` (Linux)
-and re-sync NTP if your clock is more than a couple of minutes off.
+**Logs show `Beacon OpenTelemetry SDK ready` but no data in dashboards.**
+Most often clock skew between the server and the LGTM stack. Mimir
+rejects samples that are too far in the past or future. Run
+`w32tm /query /status` (Windows) or `timedatectl` (Linux) and re-sync
+NTP if your clock is more than a couple of minutes off the Docker
+host's clock.
 
 **Server log shows "could not register Hytale player events".** Beacon's
 binding layer is validated against Hytale `2026.03.26-89796e57b`. If you
@@ -158,7 +158,7 @@ Hytale version string from your server boot log.
 
 ## Next steps
 
-- Configuration details and tuning: [`configuration.md`](configuration.md) (à venir).
+- Configuration details and tuning: [`configuration.md`](configuration.md).
 - Sending metrics to Grafana Cloud, Datadog, Honeycomb, or another OTLP
   backend: [`backends.md`](backends.md) (à venir).
 - Performance and overhead numbers: [`perf.md`](perf.md).
