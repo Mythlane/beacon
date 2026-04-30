@@ -79,7 +79,7 @@ $env:OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4317"
 $env:OTEL_EXPORTER_OTLP_PROTOCOL = "grpc"
 ```
 
-Alternative: place a TOML file at `mods/Mythlane.Beacon/config.toml`:
+Alternative: place a TOML file at `mods/Mythlane_Beacon/config.toml`:
 
 ```toml
 [otel.exporter.otlp]

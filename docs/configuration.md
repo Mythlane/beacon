@@ -10,7 +10,7 @@ Beacon reads its configuration from three sources, in this precedence
 order (highest wins):
 
 1. **Environment variables** — read at server boot.
-2. **TOML file** — `mods/Mythlane.Beacon/config.toml` next to the plugin JAR.
+2. **TOML file** — `mods/Mythlane_Beacon/config.toml` next to the plugin JAR.
 3. **Built-in defaults** — compiled into `BeaconConfig`.
 
 Concrete example: if the file sets
@@ -185,7 +185,7 @@ export OTEL_RESOURCE_ATTRIBUTES="service.namespace=mythlane,deployment.environme
 
 ## Configuration file format
 
-The TOML file lives at `mods/Mythlane.Beacon/config.toml`, alongside
+The TOML file lives at `mods/Mythlane_Beacon/config.toml`, alongside
 the plugin JAR. The file is **not auto-created** in v0.1 — Beacon runs
 on defaults if the file is missing, no warning is logged. Create the
 file by hand the first time you need to override a default.

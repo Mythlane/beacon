@@ -28,7 +28,7 @@ public final class BeaconPluginLifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(BeaconPluginLifecycle.class);
 
-    public static final Path DEFAULT_CONFIG_PATH = Path.of("mods", "Mythlane.Beacon", "config.toml");
+    public static final Path DEFAULT_CONFIG_PATH = Path.of("mods", "Mythlane_Beacon", "config.toml");
     public static final long POLL_PERIOD_SECONDS = 30L;
 
     private final ConfigBootstrap configBootstrap;

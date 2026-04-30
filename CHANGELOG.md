@@ -48,7 +48,7 @@ the v0.1.0 release; each has a documented workaround.
 - **Auto-creation of `config.toml` on first boot with commented defaults
   (CdC sub-phase 1.3).** Not implemented. Beacon runs on built-in defaults if
   the file is missing, no log warning, no scaffolding written. Workaround:
-  create `mods/Mythlane.Beacon/config.toml` by hand using the example in
+  create `mods/Mythlane_Beacon/config.toml` by hand using the example in
   `docs/configuration.md`.
 - **Startup log echoes only 3 of the supported settings.** `endpoint`,
   `serviceName`, `protocol` are logged at boot; `beacon.queue.max_size`,
