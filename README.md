@@ -1,5 +1,7 @@
 # Beacon
 
+[![CI](https://github.com/Mythlane/beacon/actions/workflows/build.yml/badge.svg)](https://github.com/Mythlane/beacon/actions/workflows/build.yml)
+
 > OpenTelemetry observability for Hytale servers. Vendor-neutral, < 1% overhead.
 
 **Status:** `v0.1.0-alpha` · Pre-release
