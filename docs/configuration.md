@@ -6,18 +6,39 @@ plans but that are not yet implemented in v0.1.
 
 ## Sources of configuration
 
-Beacon reads its configuration from three sources, in this precedence
+Beacon reads its configuration from four sources, in this precedence
 order (highest wins):
 
-1. **Environment variables** — read at server boot.
-2. **TOML file** — `mods/Mythlane_Beacon/config.toml` next to the plugin JAR.
-3. **Built-in defaults** — compiled into `BeaconConfig`.
+1. **JVM system properties** (`-Dotel.*`) — read at server boot.
+2. **Environment variables** (`OTEL_*`) — read at server boot.
+3. **TOML file** — `mods/Mythlane_Beacon/config.toml` next to the plugin JAR.
+4. **Built-in defaults** — compiled into `BeaconConfig`.
 
 Concrete example: if the file sets
 `otel.exporter.otlp.endpoint = "http://otel-collector:4317"` and the
 shell exports `OTEL_EXPORTER_OTLP_ENDPOINT=http://staging:4317`, the
-shell value wins. Empty environment variables (`""`) are treated as
-unset and do not override the file.
+shell value wins. If the JVM is also launched with
+`-Dotel.exporter.otlp.endpoint=http://override:4317`, the JVM property
+wins over both. Empty values (`""`) are treated as unset and do not
+override lower-precedence sources.
+
+### JVM system properties
+
+Beacon honors the standard OTel JVM system properties when launching
+the server JVM. The properties are equivalent to the env vars listed
+below. JVM properties are typically set in `jvm.options` or directly on
+the `java` command line:
+
+```
+-Dotel.exporter.otlp.endpoint=http://localhost:4317
+-Dotel.exporter.otlp.protocol=grpc
+-Dotel.service.name=hytale-server
+-Dotel.resource.attributes=service.namespace=mythlane,deployment.environment=prod
+```
+
+System properties are preferred over env vars in setups where the
+launcher script (e.g. `start.bat` → `java`) does not propagate the
+shell environment.
 
 `ConfigBootstrap` (in the `binding` module) wraps the loader with a
 catch-all: if the TOML file is malformed, missing, oversized
@@ -27,16 +48,16 @@ prevents the Hytale server from booting because of a config issue.
 
 ## Quick reference
 
-| Setting | TOML key | Env var | Default | Source of truth |
-|---|---|---|---|---|
-| OTLP endpoint | `otel.exporter.otlp.endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | Beacon |
-| OTLP protocol | `otel.exporter.otlp.protocol` | `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | Beacon |
-| Service name | `otel.service.name` | `OTEL_SERVICE_NAME` | `hytale-server` | Beacon |
-| Export queue capacity | `beacon.queue.max_size` | *(none)* | `16384` | Beacon |
-| OTLP headers | *(none)* | `OTEL_EXPORTER_OTLP_HEADERS` | *(empty)* | OTel autoconfigure |
-| Resource attributes | *(none)* | `OTEL_RESOURCE_ATTRIBUTES` | *(empty)* | OTel autoconfigure |
-| Plugin kill switch | `beacon.enabled` | `BEACON_ENABLED` | n/a | **Planned, v0.2** |
-| Metric export interval | `beacon.metrics.interval` | `BEACON_METRICS_INTERVAL` | n/a | **Planned, v0.2** |
+| Setting | TOML key | Env var | JVM property | Default | Source of truth |
+|---|---|---|---|---|---|
+| OTLP endpoint | `otel.exporter.otlp.endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | `otel.exporter.otlp.endpoint` | `http://localhost:4317` | Beacon |
+| OTLP protocol | `otel.exporter.otlp.protocol` | `OTEL_EXPORTER_OTLP_PROTOCOL` | `otel.exporter.otlp.protocol` | `grpc` | Beacon |
+| Service name | `otel.service.name` | `OTEL_SERVICE_NAME` | `otel.service.name` | `hytale-server` | Beacon |
+| Export queue capacity | `beacon.queue.max_size` | *(none)* | *(none)* | `16384` | Beacon |
+| OTLP headers | *(none)* | `OTEL_EXPORTER_OTLP_HEADERS` | `otel.exporter.otlp.headers` | *(empty)* | OTel autoconfigure |
+| Resource attributes | *(none)* | `OTEL_RESOURCE_ATTRIBUTES` | `otel.resource.attributes` | *(empty)* | OTel autoconfigure |
+| Plugin kill switch | `beacon.enabled` | `BEACON_ENABLED` | n/a | n/a | **Planned, v0.2** |
+| Metric export interval | `beacon.metrics.interval` | `BEACON_METRICS_INTERVAL` | n/a | n/a | **Planned, v0.2** |
 
 ## Field-by-field reference
 

@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -67,6 +68,47 @@ class ConfigPrecedenceTest {
         assertThatThrownBy(() -> ConfigLoader.load(file, Map.of()))
                 .isInstanceOf(ConfigLoaderException.class)
                 .hasMessageContaining("config too large");
+    }
+
+    @Test
+    void sysPropertyOverridesEnvVar() {
+        Map<String, String> env = Map.of(ConfigLoader.ENV_SERVICE_NAME, "from-env");
+        Properties sys = new Properties();
+        sys.setProperty(ConfigLoader.SYS_SERVICE_NAME, "from-sys");
+
+        BeaconConfig cfg = ConfigLoader.load(null, env, sys);
+
+        assertThat(cfg.serviceName()).isEqualTo("from-sys");
+    }
+
+    @Test
+    void envVarUsedWhenSysPropertyAbsent() {
+        Map<String, String> env = Map.of(ConfigLoader.ENV_SERVICE_NAME, "from-env");
+
+        BeaconConfig cfg = ConfigLoader.load(null, env, new Properties());
+
+        assertThat(cfg.serviceName()).isEqualTo("from-env");
+    }
+
+    @Test
+    void tomlUsedWhenNeitherSysNorEnv(@TempDir Path tmp) throws IOException {
+        Path file = writeToml(tmp, "[otel.service]\nname = \"from-toml\"\n");
+
+        BeaconConfig cfg = ConfigLoader.load(file, Map.of(), new Properties());
+
+        assertThat(cfg.serviceName()).isEqualTo("from-toml");
+    }
+
+    @Test
+    void sysPropertyAppliesToEndpointAndProtocol() {
+        Properties sys = new Properties();
+        sys.setProperty(ConfigLoader.SYS_ENDPOINT, "http://sys-endpoint:4317");
+        sys.setProperty(ConfigLoader.SYS_PROTOCOL, "http/protobuf");
+
+        BeaconConfig cfg = ConfigLoader.load(null, Map.of(), sys);
+
+        assertThat(cfg.endpoint()).isEqualTo("http://sys-endpoint:4317");
+        assertThat(cfg.protocol()).isEqualTo("http/protobuf");
     }
 
     @Test

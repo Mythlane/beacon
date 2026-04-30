@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Properties;
 
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
@@ -13,6 +14,10 @@ public final class ConfigLoader {
     public static final String ENV_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT";
     public static final String ENV_SERVICE_NAME = "OTEL_SERVICE_NAME";
     public static final String ENV_PROTOCOL = "OTEL_EXPORTER_OTLP_PROTOCOL";
+
+    public static final String SYS_ENDPOINT = "otel.exporter.otlp.endpoint";
+    public static final String SYS_SERVICE_NAME = "otel.service.name";
+    public static final String SYS_PROTOCOL = "otel.exporter.otlp.protocol";
 
     private static final String FILE_KEY_ENDPOINT = "otel.exporter.otlp.endpoint";
     private static final String FILE_KEY_SERVICE_NAME = "otel.service.name";
@@ -24,10 +29,14 @@ public final class ConfigLoader {
     private ConfigLoader() {}
 
     public static BeaconConfig load(Path configFile) {
-        return load(configFile, System.getenv());
+        return load(configFile, System.getenv(), System.getProperties());
     }
 
     public static BeaconConfig load(Path configFile, Map<String, String> env) {
+        return load(configFile, env, new Properties());
+    }
+
+    public static BeaconConfig load(Path configFile, Map<String, String> env, Properties sys) {
         String endpoint = BeaconConfig.DEFAULT_ENDPOINT;
         String serviceName = BeaconConfig.DEFAULT_SERVICE_NAME;
         String protocol = BeaconConfig.DEFAULT_PROTOCOL;
@@ -80,6 +89,17 @@ public final class ConfigLoader {
 
             String envProtocol = env.get(ENV_PROTOCOL);
             if (envProtocol != null && !envProtocol.isEmpty()) protocol = envProtocol;
+        }
+
+        if (sys != null) {
+            String sysEndpoint = sys.getProperty(SYS_ENDPOINT);
+            if (sysEndpoint != null && !sysEndpoint.isEmpty()) endpoint = sysEndpoint;
+
+            String sysServiceName = sys.getProperty(SYS_SERVICE_NAME);
+            if (sysServiceName != null && !sysServiceName.isEmpty()) serviceName = sysServiceName;
+
+            String sysProtocol = sys.getProperty(SYS_PROTOCOL);
+            if (sysProtocol != null && !sysProtocol.isEmpty()) protocol = sysProtocol;
         }
 
         return new BeaconConfig(endpoint, serviceName, protocol, queueMaxSize);
