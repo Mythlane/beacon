@@ -86,8 +86,8 @@ Alternative: place a TOML file at `mods/Mythlane.Beacon/config.toml`:
 endpoint = "http://localhost:4317"
 protocol = "grpc"
 
-[beacon]
-service_name = "hytale-server-dev"
+[otel.service]
+name = "hytale-server-dev"
 ```
 
 Precedence is **environment variables > config file > built-in defaults**.
@@ -99,13 +99,14 @@ Start the Hytale server as you normally would. After boot, search the
 logs for these two lines:
 
 ```
-Beacon OpenTelemetry SDK ready: endpoint=http://localhost:4317 protocol=grpc
+Beacon OpenTelemetry SDK ready: sdk=io.opentelemetry.sdk.OpenTelemetrySdk endpoint=http://localhost:4317 protocol=grpc
 Beacon JVM runtime metrics enabled (memory, GC, threads, classes, CPU)
 ```
 
-If you see `JVM agent not attached, falling back to in-process metrics`,
-that is expected for v0.1 without the optional agent JAR. All Beacon
-metrics still ship.
+If you see `JVM agent not attached, JVM auto-instrumentation metrics
+will be missing. Add -javaagent:opentelemetry-javaagent.jar to JVM
+flags.`, that is expected for v0.1 without the optional agent JAR.
+All Beacon metrics still ship.
 
 ## Step 5 - Open the dashboard (~30s)
 

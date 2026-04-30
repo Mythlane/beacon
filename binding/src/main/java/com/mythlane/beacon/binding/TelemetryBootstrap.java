@@ -51,7 +51,8 @@ final class TelemetryBootstrap {
         try {
             OpenTelemetry otel = OpenTelemetryFactory.createOrAdopt(
                     config, globalProbe, registerAsGlobal, CardinalityGuard::install);
-            LOG.info("Beacon OpenTelemetry SDK ready: {}", otel.getClass().getName());
+            LOG.info("Beacon OpenTelemetry SDK ready: sdk={} endpoint={} protocol={}",
+                    otel.getClass().getName(), config.endpoint(), config.protocol());
             warnIfJavaagentMissing();
             return otel;
         } catch (Throwable t) {
