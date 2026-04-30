@@ -53,7 +53,7 @@ into a single viewer.
 - Vendor-neutral OTLP export (gRPC default; HTTP/protobuf override via
   `OTEL_EXPORTER_OTLP_PROTOCOL`).
 - < 1% CPU overhead measured at 20 simulated players over 10 minutes
-  (release-blocker bench, 3-run median, see [`docs/perf-quic.md`](docs/perf-quic.md)).
+  (release-blocker bench, 3-run median, see [`docs/perf.md`](docs/perf.md)).
 
 ---
 
@@ -93,7 +93,26 @@ Common env vars:
 | `OTEL_RESOURCE_ATTRIBUTES` | _(empty)_ | extra resource attributes |
 
 Privacy and security guidance: [`docs/security.md`](docs/security.md).
-Release procedure: [`docs/release-procedure.md`](docs/release-procedure.md).
+
+---
+
+## Documentation
+
+User documentation:
+- [Getting started](docs/getting-started.md) — 5-minute quickstart
+- [Configuration](docs/configuration.md) — environment variables,
+  config.toml reference, gaps
+- [Performance](docs/perf.md) — JMH benchmarks, overhead projection,
+  methodology
+- [Backends](docs/backends.md) — self-hosted LGTM stack setup
+- [Changelog](CHANGELOG.md) — version history
+
+Operator & contributor documentation:
+- [Quickstart validation](docs/quickstart-validation.md) — release gate
+  verification
+- [Release procedure](docs/release-procedure.md) — how to cut a tagged
+  release
+- [Security](docs/security.md) — disclosure policy, SBOM, threat model
 
 ---
 

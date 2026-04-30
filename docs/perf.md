@@ -28,8 +28,8 @@ The JMH benchmarks below sidestep that constraint: they measure the cost
 of Beacon's own hot paths in isolation, with no dependency on the Hytale
 SDK at runtime. The protocol layer is irrelevant to the per-call cost of
 recording a tick, registering a player join, exporting a metric, or
-submitting an export. End-to-end QUIC numbers will land in
-`docs/perf-quic.md` once the live bench can run.
+submitting an export. End-to-end QUIC numbers are deferred to v0.2
+(see Backlog below).
 
 ### JMH configuration
 
@@ -118,7 +118,7 @@ for 100,000 such fleets.
 
 Release criterion 1.10 is met with the JMH harness; the QUIC end-to-end
 gate (1% hard fail, 1.5% noise headroom) remains gated on Hytale public
-release and will be re-validated in `docs/perf-quic.md` when unblocked.
+release and will be re-validated when unblocked (see Backlog below).
 
 ## Limitations
 
@@ -146,7 +146,7 @@ them when citing these results.
    OTLP exporter against a slow or throttling backend will queue,
    retry, and eventually trip the breaker - costs that the synthetic
    bench cannot reach. To close: end-to-end overhead bench with a real
-   OTLP collector (in `docs/perf-quic.md`).
+   OTLP collector (deferred to v0.2).
 
 ## Backlog
 
@@ -166,8 +166,7 @@ Future benchmark work tracked against the roadmap.
     `new byte[]{0x01}` placeholder fails server-side `validateStructure`.
 
   Fix is non-trivial (~10-15h estimated, primarily payload schema
-  reconstruction). End-to-end results will land in `docs/perf-quic.md`
-  once unblocked. Release criterion 1.10 is met via the JMH harness; the
+  reconstruction). End-to-end results will land once unblocked. Release criterion 1.10 is met via the JMH harness; the
   QUIC end-to-end is a refinement, not a blocker.
 - **Burst behavior + cascade breaker** (Phase 3.2) - simulate a 10 Hz
   submission peak to validate that `ExportFailureHandler.submit()` and
