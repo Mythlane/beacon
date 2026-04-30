@@ -28,7 +28,7 @@ images.
 ## Step 1 - Download the plugin (~30s)
 
 Download `beacon-0.1.0.jar` from the
-[GitHub Releases page](https://github.com/mythlane/hytale-beacon/releases)
+[GitHub Releases page](https://github.com/mythlane/beacon/releases)
 and drop it into your Hytale server's `mods/` directory.
 
 ```
@@ -47,8 +47,8 @@ up the stack. LGTM = Loki + Grafana + Tempo + Mimir, the standard
 self-hosted observability bundle.
 
 ```bash
-git clone https://github.com/mythlane/hytale-beacon.git
-cd hytale-beacon/examples/lgtm-stack
+git clone https://github.com/mythlane/beacon.git
+cd beacon/examples/lgtm-stack
 docker compose up -d --wait
 ```
 
