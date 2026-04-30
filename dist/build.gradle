@@ -16,7 +16,7 @@ dependencies {
     implementation project(':instrum')
     implementation project(':binding')
 
-    testImplementation 'org.json:json:20240303'
+    testImplementation libs.json
 }
 
 tasks.named('shadowJar') {

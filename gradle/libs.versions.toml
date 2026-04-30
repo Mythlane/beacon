@@ -2,15 +2,19 @@
 java = "21"
 shadow = "9.3.1"
 junit = "5.10.2"
+junitLauncher = "1.10.2"
 mockito = "5.12.0"
 assertj = "3.26.0"
 otelSdk = "1.61.0"
 otelAgent = "2.27.0"
+otelRuntimeTelemetry = "2.27.0-alpha"
 autoservice = "1.1.1"
 slf4j = "2.0.13"
 hytaleServer = "2026.03.26-89796e57b"
 nettyIncubatorQuic = "0.0.72.Final"
 netty = "4.1.132.Final"
+tomlj = "1.1.1"
+json = "20240303"
 jmhPlugin = "0.7.3"
 
 [libraries]
@@ -21,6 +25,7 @@ otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk" }
 otel-sdk-autoconfigure = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure" }
 otel-sdk-autoconfigure-spi = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi" }
 otel-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
+otel-runtime-telemetry-java17 = { module = "io.opentelemetry.instrumentation:opentelemetry-runtime-telemetry-java17", version.ref = "otelRuntimeTelemetry" }
 
 # OpenTelemetry Java Agent extension API (2.27.0-alpha)
 otel-javaagent-extension-api = { module = "io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api", version = "2.27.0-alpha" }
@@ -46,10 +51,14 @@ slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 
 # Test stack — JUnit 5 + Mockito + AssertJ (Java standard)
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.10.2" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitLauncher" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+# Config parsing & test fixtures
+tomlj = { module = "org.tomlj:tomlj", version.ref = "tomlj" }
+json = { module = "org.json:json", version.ref = "json" }
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

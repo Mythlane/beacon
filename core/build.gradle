@@ -12,9 +12,9 @@ dependencies {
     implementation libs.otel.sdk.autoconfigure
     implementation libs.otel.exporter.otlp
 
-    implementation 'io.opentelemetry.instrumentation:opentelemetry-runtime-telemetry-java17:2.10.0-alpha'
+    implementation libs.otel.runtime.telemetry.java17
 
-    implementation 'org.tomlj:tomlj:1.1.1'
+    implementation libs.tomlj
 
     implementation libs.slf4j.api
     testRuntimeOnly libs.slf4j.simple

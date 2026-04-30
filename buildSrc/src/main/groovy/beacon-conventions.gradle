@@ -3,6 +3,29 @@
 
 plugins {
     id 'java-library'
+    id 'jacoco'
+}
+
+// JaCoCo coverage reporting. Run ./gradlew jacocoTestReport per
+// module, or aggregate via the dedicated script. Coverage
+// thresholds are not enforced yet (see backlog).
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+tasks.withType(Test).configureEach {
+    finalizedBy 'jacocoAggregateReport'
+}
+
+tasks.register('jacocoAggregateReport', JacocoReport) {
+    dependsOn tasks.withType(Test)
+    executionData fileTree(layout.buildDirectory.get().asFile).include('jacoco/*.exec')
+    sourceDirectories.from files('src/main/java')
+    classDirectories.from files(layout.buildDirectory.dir('classes/java/main'))
+    reports {
+        xml.required = true
+        html.required = false
+    }
 }
 
 group = (findProperty('libGroup') ?: 'com.mythlane')
