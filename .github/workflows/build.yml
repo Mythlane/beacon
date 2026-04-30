@@ -1,5 +1,10 @@
 name: CI
 
+# Note: actions/cache@v4 and actions/upload-artifact@v4 use the GitHub
+# Actions artifact API v2, which Gitea Actions does not yet support.
+# Those steps are conditional on github.server_url to keep both runners
+# green.
+
 on:
   push:
     branches: [main]
@@ -25,6 +30,7 @@ jobs:
           java-version: '25'
 
       - name: Cache Gradle
+        if: github.server_url == 'https://github.com'
         uses: actions/cache@v4
         with:
           path: |
@@ -47,7 +53,7 @@ jobs:
         run: ./gradlew jacocoAggregateReport --no-daemon
 
       - name: Upload test reports
-        if: always()
+        if: always() && github.server_url == 'https://github.com'
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
@@ -55,7 +61,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload test results (xml)
-        if: always()
+        if: always() && github.server_url == 'https://github.com'
         uses: actions/upload-artifact@v4
         with:
           name: test-results
@@ -63,7 +69,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload JaCoCo reports
-        if: always()
+        if: always() && github.server_url == 'https://github.com'
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-reports
