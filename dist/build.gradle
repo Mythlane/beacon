@@ -33,6 +33,7 @@ tasks.named('shadowJar') {
     relocate 'okhttp3',              'com.mythlane.beacon.shaded.okhttp3'
     relocate 'okio',                 'com.mythlane.beacon.shaded.okio'
     relocate 'io.perfmark',          'com.mythlane.beacon.shaded.perfmark'
+    relocate 'org.slf4j',            'com.mythlane.beacon.shaded.slf4j'
     // Do NOT relocate com.mythlane.beacon.* or com.hypixel.hytale.* (Hytale
     // provides the server SDK at runtime).
 }
@@ -41,7 +42,7 @@ tasks.named('build') {
     dependsOn tasks.named('shadowJar')
 }
 
-def unshadedRegex = ~$/^(io/opentelemetry|io/grpc|com/google/protobuf|io/netty|okhttp3|okio|io/perfmark)/.*\.class$/$
+def unshadedRegex = ~$/^(io/opentelemetry|io/grpc|com/google/protobuf|io/netty|okhttp3|okio|io/perfmark|org/slf4j)/.*\.class$/$
 
 tasks.register('checkShading') {
     group = 'verification'
