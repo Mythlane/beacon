@@ -33,6 +33,29 @@ Versioning: pre-1.0 may break between alphas; strict semver from `1.0.0`.
 - `TelemetryBootstrap` betweenness 0.10 — most structural of the new components,
   to monitor as Phase 2 lands.
 
+### Known Limitations
+
+CdC sub-phase items planned for v0.1 but deferred to v0.2. None of these block
+the v0.1.0 release; each has a documented workaround.
+
+- **`beacon.enabled` / `BEACON_ENABLED` kill switch (CdC sub-phase 1.x).** Not
+  implemented. Beacon is always active when the JAR is present. Workaround:
+  remove `beacon-0.1.0.jar` from `mods/` and restart to disable.
+- **`beacon.metrics.interval` / `BEACON_METRICS_INTERVAL` (CdC sub-phase 1.x).**
+  Export interval hardcoded to 30 s in `PeriodicMetricReader`. No workaround
+  in-process; backends needing a different cadence must reaggregate at a
+  collector.
+- **Auto-creation of `config.toml` on first boot with commented defaults
+  (CdC sub-phase 1.3).** Not implemented. Beacon runs on built-in defaults if
+  the file is missing, no log warning, no scaffolding written. Workaround:
+  create `mods/Mythlane.Beacon/config.toml` by hand using the example in
+  `docs/configuration.md`.
+- **Startup log echoes only 3 of the supported settings.** `endpoint`,
+  `serviceName`, `protocol` are logged at boot; `beacon.queue.max_size`,
+  `OTEL_EXPORTER_OTLP_HEADERS`, and `OTEL_RESOURCE_ATTRIBUTES` cannot be
+  verified from logs alone. Verify via metrics or backend-side inspection
+  (see `docs/configuration.md` "Limitations of v0.1 startup logging").
+
 ## [0.1.0-alpha] - 2026-04-29
 
 First public pre-release.
