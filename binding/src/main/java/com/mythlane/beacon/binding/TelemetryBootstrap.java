@@ -128,8 +128,9 @@ final class TelemetryBootstrap {
             List<String> args = jvmInputArgsSupplier.get();
             boolean hasAgent = args != null && args.stream().anyMatch(a -> a != null && a.contains("-javaagent"));
             if (!hasAgent) {
-                LOG.warn("JVM agent not attached, JVM auto-instrumentation metrics will be missing. "
-                        + "Add -javaagent:opentelemetry-javaagent.jar to JVM flags.");
+                LOG.warn("OTel Java Agent not detected. Beacon will emit JVM runtime metrics in "
+                        + "library mode (heap, GC, threads, classes, CPU). HTTP/JDBC/Netty "
+                        + "auto-instrumentation requires the agent.");
             }
         } catch (Throwable t) {
             LOG.warn("Could not inspect JVM input arguments", t);

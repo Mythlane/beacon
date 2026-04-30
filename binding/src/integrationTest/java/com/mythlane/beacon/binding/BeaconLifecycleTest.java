@@ -59,9 +59,11 @@ class BeaconLifecycleTest {
 
     @Test
     void warnsWhenJavaAgentNotAttached(@TempDir Path tmp) {
-        PrintStream originalErr = System.err;
+        java.util.logging.Logger jul = java.util.logging.Logger.getLogger(TelemetryBootstrap.class.getName());
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(captured));
+        java.util.logging.StreamHandler handler = new java.util.logging.StreamHandler(captured, new java.util.logging.SimpleFormatter());
+        handler.setLevel(java.util.logging.Level.ALL);
+        jul.addHandler(handler);
         try {
             BeaconPluginLifecycle lifecycle = new BeaconPluginLifecycle(
                     tmp.resolve("nonexistent-config.toml"),
@@ -70,11 +72,11 @@ class BeaconLifecycleTest {
             lifecycle.setup();
             lifecycle.start();
             lifecycle.shutdown();
+            handler.flush();
         } finally {
-            System.setErr(originalErr);
+            jul.removeHandler(handler);
         }
 
-        String output = captured.toString();
-        assertThat(output).contains("JVM agent not attached");
+        assertThat(captured.toString()).contains("OTel Java Agent not detected");
     }
 }

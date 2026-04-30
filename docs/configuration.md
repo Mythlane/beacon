@@ -336,6 +336,44 @@ export OTEL_RESOURCE_ATTRIBUTES="service.namespace=mythlane,deployment.environme
 semantic conventions. The full list is at
 <https://opentelemetry.io/docs/specs/semconv/resource/>.
 
+## JVM agent setup (optional, advanced)
+
+Beacon's standard setup is a single JAR in `mods/` — JVM runtime metrics
+(heap, GC, threads, classes, CPU) are emitted directly by the plugin in
+library mode. You do **not** need the OpenTelemetry Java Agent for any
+v0.1 dashboard panel.
+
+Attach the agent only when you also want HTTP/JDBC/Netty
+auto-instrumentation (outbound HTTP calls, database queries, Netty pipeline
+spans). This is a three-JAR setup:
+
+1. Keep `beacon-0.1.0-alpha.jar` in `mods/`.
+2. Place `opentelemetry-javaagent.jar` (download from
+   <https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases>)
+   at the server root.
+3. Place `beacon-agent-0.1.0-alpha.jar` (Beacon's agent extension, from
+   the same release as the plugin) at the server root.
+
+Add to `jvm.options` (server root):
+
+```
+-javaagent:opentelemetry-javaagent.jar
+-Dotel.javaagent.extensions=beacon-agent-0.1.0-alpha.jar
+-Dotel.exporter.otlp.endpoint=http://localhost:4317
+-Dotel.exporter.otlp.protocol=grpc
+-Dotel.service.name=hytale-server
+```
+
+The agent and the Beacon plugin coexist: the plugin owns TPS, MSPT, players,
+and JVM library-mode runtime metrics; the agent adds HTTP/JDBC/Netty
+auto-instrumentation on top.
+
+> **Caveat (v0.1):** the plugin always emits JVM library-mode metrics
+> regardless of agent presence. If the agent's `runtime-telemetry` is also
+> active, JVM metrics may be double-published under different instrument
+> names. Pick one source (drop `runtime-telemetry` from the agent config,
+> or accept both series). Resolved properly in v0.2.
+
 ## Reloading configuration
 
 In v0.1, configuration is read once at server boot. Changes to the

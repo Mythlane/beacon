@@ -21,25 +21,27 @@ into a single viewer.
 
 > Validated procedure: see [`docs/quickstart-validation.md`](docs/quickstart-validation.md).
 
-1. **Download** `beacon-0.1.0-alpha.jar`, `beacon-agent-0.1.0-alpha.jar`, and
-   `opentelemetry-javaagent-2.27.0.jar` from the
+1. **Download** `beacon-0.1.0-alpha.jar` from the
    [Beacon CurseForge page](https://www.curseforge.com/) (alpha release).
-2. **Install Beacon.** Drop `beacon-0.1.0-alpha.jar` into the `mods/` directory
-   next to your `HytaleServer.jar`. The server creates this directory
-   automatically the first time it boots in non-`--bare` mode.
-3. **Add JVM flags** to your server launch command:
-   `-javaagent:opentelemetry-javaagent-2.27.0.jar -Dotel.javaagent.extensions=beacon-agent-0.1.0-alpha.jar`
-4. **Set environment** so the agent knows where to ship telemetry:
+2. **Install Beacon.** Drop the JAR into the `mods/` directory next to your
+   `HytaleServer.jar`. The server creates `mods/` automatically the first
+   time it boots in non-`--bare` mode.
+3. **Set environment** so Beacon knows where to ship telemetry:
    `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317` and
    `OTEL_SERVICE_NAME=hytale-server`.
-5. **Bring up the local backend.** From this repo root:
+4. **Bring up the local backend.** From this repo root:
    `cd examples/lgtm-stack && docker compose up -d`. This launches Tempo, Loki,
    Mimir, Pyroscope, an OpenTelemetry Collector, and Grafana with
    datasources and the Server Health dashboard auto-provisioned.
-6. **Open Grafana** at <http://localhost:3000> (default login `admin` /
+5. **Open Grafana** at <http://localhost:3000> (default login `admin` /
    `admin`) and select the Server Health dashboard. Once your server boots
    you should see TPS, MSPT, JVM heap, GC, and players-online panels populate
    within ~30 seconds.
+
+That single JAR emits TPS, MSPT, players online, and JVM runtime metrics
+(heap, GC, threads, classes, CPU). HTTP/JDBC/Netty auto-instrumentation is
+**optional** and requires the OpenTelemetry Java Agent — see
+[`docs/configuration.md`](docs/configuration.md#jvm-agent-setup-optional-advanced).
 
 ---
 
@@ -48,8 +50,10 @@ into a single viewer.
 - `hytale.tps` (gauge, target 30, red threshold 27), per world.
 - `hytale.mspt` (histogram, sourced from Hytale's `HistoricMetric`).
 - `hytale.players.online` (counter, idempotent on `PlayerDisconnectEvent`).
-- JVM auto-instrumentation (`process.runtime.jvm.*`) via the OTel Java Agent:
-  heap, GC, threads, classes, file descriptors.
+- JVM runtime metrics (heap, GC, threads, classes, CPU) emitted by Beacon
+  itself in library mode — no agent required.
+- Optional HTTP/JDBC/Netty auto-instrumentation when the OTel Java Agent
+  is attached (see configuration docs).
 - Vendor-neutral OTLP export (gRPC default; HTTP/protobuf override via
   `OTEL_EXPORTER_OTLP_PROTOCOL`).
 - < 1% CPU overhead measured at 20 simulated players over 10 minutes
@@ -74,9 +78,10 @@ Five Gradle modules keep the Hytale-SDK-dependent code isolated:
   `io.perfmark` relocated under `com.mythlane.beacon.shaded.*`) plus the
   `checkShading` and `verifyServiceFiles` CI gates.
 
-The two-JAR delivery (`beacon.jar` for the plugin, `beacon-agent.jar` for the
-agent extension) is intentional: the agent extension must be loaded by the
-agent's extension classloader, not the plugin classloader.
+Beacon ships as a single plugin JAR (`beacon.jar`) for the standard setup.
+A companion `beacon-agent.jar` extension is also published for users who
+opt into the OTel Java Agent for HTTP/JDBC/Netty auto-instrumentation; it
+must load via the agent's extension classloader, not the plugin classloader.
 
 ---
 

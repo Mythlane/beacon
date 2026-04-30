@@ -174,20 +174,23 @@ class TelemetryBootstrapTest {
 
     @Test
     void javaagentWarnSilentWhenAgentArgPresent() {
-        PrintStream originalErr = System.err;
+        java.util.logging.Logger jul = java.util.logging.Logger.getLogger(TelemetryBootstrap.class.getName());
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(captured));
+        java.util.logging.StreamHandler handler = new java.util.logging.StreamHandler(captured, new java.util.logging.SimpleFormatter());
+        handler.setLevel(java.util.logging.Level.ALL);
+        jul.addHandler(handler);
         try {
             TelemetryBootstrap b = bootstrap(
                     OpenTelemetry::noop,
                     java.util.Arrays.asList(null, "-javaagent:opentelemetry-javaagent.jar"),
                     mock(IEventRegistry.class));
             b.build(BeaconConfig.defaults());
+            handler.flush();
         } finally {
-            System.setErr(originalErr);
+            jul.removeHandler(handler);
         }
 
-        assertThat(captured.toString()).doesNotContain("JVM agent not attached");
+        assertThat(captured.toString()).doesNotContain("OTel Java Agent not detected");
     }
 
     @Test
@@ -209,16 +212,19 @@ class TelemetryBootstrapTest {
 
     @Test
     void javaagentWarnTriggeredWhenAbsent() {
-        PrintStream originalErr = System.err;
+        java.util.logging.Logger jul = java.util.logging.Logger.getLogger(TelemetryBootstrap.class.getName());
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(captured));
+        java.util.logging.StreamHandler handler = new java.util.logging.StreamHandler(captured, new java.util.logging.SimpleFormatter());
+        handler.setLevel(java.util.logging.Level.ALL);
+        jul.addHandler(handler);
         try {
             TelemetryBootstrap b = bootstrap(OpenTelemetry::noop, List.of("-Xmx4G", "-XX:+UseG1GC"), mock(IEventRegistry.class));
             b.build(BeaconConfig.defaults());
+            handler.flush();
         } finally {
-            System.setErr(originalErr);
+            jul.removeHandler(handler);
         }
 
-        assertThat(captured.toString()).contains("JVM agent not attached");
+        assertThat(captured.toString()).contains("OTel Java Agent not detected");
     }
 }

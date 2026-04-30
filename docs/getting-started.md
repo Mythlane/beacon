@@ -36,9 +36,15 @@ mods/
   beacon-0.1.0.jar
 ```
 
-The companion `beacon-agent-0.1.0.jar` (OpenTelemetry Java agent
-extension) is **optional** for v0.1. The plugin produces all v0.1
-metrics without it.
+This single JAR is the entire v0.1 setup. It emits all advertised v0.1
+metrics — TPS, MSPT, players online, JVM heap, GC, threads, classes,
+CPU — directly in library mode.
+
+The companion `beacon-agent-0.1.0.jar` is published for users who attach
+the OpenTelemetry Java Agent to gain HTTP/JDBC/Netty auto-instrumentation.
+It is **not needed** for the dashboard panels in this guide. See
+[`configuration.md`](configuration.md#jvm-agent-setup-optional-advanced)
+if you want to add the agent later.
 
 ## Step 2 - Start the LGTM stack (~60s)
 
@@ -103,10 +109,10 @@ Beacon OpenTelemetry SDK ready: sdk=io.opentelemetry.sdk.OpenTelemetrySdk endpoi
 Beacon JVM runtime metrics enabled (memory, GC, threads, classes, CPU)
 ```
 
-If you see `JVM agent not attached, JVM auto-instrumentation metrics
-will be missing. Add -javaagent:opentelemetry-javaagent.jar to JVM
-flags.`, that is expected for v0.1 without the optional agent JAR.
-All Beacon metrics still ship.
+If you see `OTel Java Agent not detected. Beacon will emit JVM runtime
+metrics in library mode (heap, GC, threads, classes, CPU). HTTP/JDBC/Netty
+auto-instrumentation requires the agent.`, that is expected — and fine
+for the dashboard in this guide. All advertised v0.1 metrics still ship.
 
 ## Step 5 - Open the dashboard (~30s)
 
