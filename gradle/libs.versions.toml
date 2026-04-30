@@ -48,6 +48,7 @@ netty-codec = { module = "io.netty:netty-codec", version.ref = "netty" }
 # Logging
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
 
 # Test stack — JUnit 5 + Mockito + AssertJ (Java standard)
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
