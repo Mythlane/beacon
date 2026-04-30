@@ -186,9 +186,11 @@ export OTEL_RESOURCE_ATTRIBUTES="service.namespace=mythlane,deployment.environme
 ## Configuration file format
 
 The TOML file lives at `mods/Mythlane_Beacon/config.toml`, alongside
-the plugin JAR. The file is **not auto-created** in v0.1 — Beacon runs
-on defaults if the file is missing, no warning is logged. Create the
-file by hand the first time you need to override a default.
+the plugin JAR. The file is **auto-created on first boot** with all
+default values commented out — edit and uncomment the lines you want
+to override, then restart the server to apply. If auto-creation fails
+(read-only filesystem, missing permissions), Beacon logs a warning and
+falls back to compiled defaults; server boot is never blocked.
 
 The TOML 1.0 specification is at <https://toml.io/en/v1.0.0>. Beacon
 parses with `org.tomlj.Toml` and rejects files larger than 1 MiB to

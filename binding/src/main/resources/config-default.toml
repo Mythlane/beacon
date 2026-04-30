@@ -1,0 +1,28 @@
+# Beacon configuration (TOML 1.0).
+#
+# This file was auto-generated on first boot at:
+#   mods/Mythlane_Beacon/config.toml
+#
+# Precedence (highest wins): environment variables > this file > built-in defaults.
+# All values below are the built-in defaults; uncomment a line to override.
+# Environment variable overrides are documented in docs/configuration.md.
+
+[otel.exporter.otlp]
+# OTLP collector endpoint. Required in practice; the default points at a
+# local docker-compose collector (see examples/lgtm-stack/).
+# Override env: OTEL_EXPORTER_OTLP_ENDPOINT
+# endpoint = "http://localhost:4317"
+
+# Wire protocol. One of: "grpc", "http/protobuf".
+# Override env: OTEL_EXPORTER_OTLP_PROTOCOL
+# protocol = "grpc"
+
+[otel.service]
+# Logical service name shown in backends as `service.name`.
+# Override env: OTEL_SERVICE_NAME
+# name = "hytale-server"
+
+[beacon.queue]
+# Maximum number of pending OTLP records buffered before drop.
+# No environment override; file or default only.
+# max_size = 16384

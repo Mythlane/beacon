@@ -5,6 +5,12 @@ Versioning: pre-1.0 may break between alphas; strict semver from `1.0.0`.
 
 ## [Unreleased] - v0.1.0-rc
 
+### Added
+
+- **`config.toml` auto-created on first boot** at `mods/Mythlane_Beacon/config.toml`
+  with all default values commented out. Edit and uncomment lines to override;
+  fail-soft on filesystem errors (logs a warning, falls back to compiled defaults).
+
 ### Refactoring
 
 - **BeaconPluginLifecycle decomposition** (graphify-driven). The Hytale-agnostic
@@ -45,11 +51,6 @@ the v0.1.0 release; each has a documented workaround.
   Export interval hardcoded to 30 s in `PeriodicMetricReader`. No workaround
   in-process; backends needing a different cadence must reaggregate at a
   collector.
-- **Auto-creation of `config.toml` on first boot with commented defaults
-  (CdC sub-phase 1.3).** Not implemented. Beacon runs on built-in defaults if
-  the file is missing, no log warning, no scaffolding written. Workaround:
-  create `mods/Mythlane_Beacon/config.toml` by hand using the example in
-  `docs/configuration.md`.
 - **Startup log echoes only 3 of the supported settings.** `endpoint`,
   `serviceName`, `protocol` are logged at boot; `beacon.queue.max_size`,
   `OTEL_EXPORTER_OTLP_HEADERS`, and `OTEL_RESOURCE_ATTRIBUTES` cannot be

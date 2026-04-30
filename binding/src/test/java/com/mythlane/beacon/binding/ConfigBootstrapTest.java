@@ -11,16 +11,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ConfigBootstrapTest {
 
     @Test
-    void returnsLoadedConfig() {
+    void returnsLoadedConfig(@org.junit.jupiter.api.io.TempDir Path tmp) {
         BeaconConfig loaded = new BeaconConfig("http://example:4317", "svc", "grpc", 1024);
-        ConfigBootstrap boot = new ConfigBootstrap(Path.of("ignored"), p -> loaded);
+        ConfigBootstrap boot = new ConfigBootstrap(tmp.resolve("ignored.toml"), p -> loaded);
 
         assertThat(boot.load()).isSameAs(loaded);
     }
 
     @Test
-    void fallsBackToDefaultsOnLoaderThrow() {
-        ConfigBootstrap boot = new ConfigBootstrap(Path.of("ignored"), p -> {
+    void fallsBackToDefaultsOnLoaderThrow(@org.junit.jupiter.api.io.TempDir Path tmp) {
+        ConfigBootstrap boot = new ConfigBootstrap(tmp.resolve("ignored.toml"), p -> {
             throw new RuntimeException("boom");
         });
 
@@ -33,11 +33,13 @@ class ConfigBootstrapTest {
     }
 
     @Test
-    void productionConstructorReturnsNonNullWhenFileMissing(@org.junit.jupiter.api.io.TempDir Path tmp) {
-        ConfigBootstrap boot = new ConfigBootstrap(tmp.resolve("missing.toml"));
+    void productionConstructorAutoCreatesAndLoadsWhenFileMissing(@org.junit.jupiter.api.io.TempDir Path tmp) {
+        Path missing = tmp.resolve("missing.toml");
+        ConfigBootstrap boot = new ConfigBootstrap(missing);
 
         BeaconConfig cfg = boot.load();
         assertThat(cfg).isNotNull();
         assertThat(cfg.endpoint()).isNotNull();
+        assertThat(java.nio.file.Files.exists(missing)).isTrue();
     }
 }
