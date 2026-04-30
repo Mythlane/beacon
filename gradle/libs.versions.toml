@@ -10,7 +10,7 @@ autoservice = "1.1.1"
 slf4j = "2.0.13"
 hytaleServer = "2026.03.26-89796e57b"
 nettyIncubatorQuic = "0.0.72.Final"
-netty = "4.1.115.Final"
+netty = "4.1.132.Final"
 jmhPlugin = "0.7.3"
 
 [libraries]
