@@ -136,7 +136,7 @@ final class TelemetryBootstrap {
         }
     }
 
-    private static Map<UUID, HytaleMetrics.WorldSample> playerCountSnapshot(PlayerCountRegistry pcr, TpsMsptRecorder tmr) {
+    static Map<UUID, HytaleMetrics.WorldSample> playerCountSnapshot(PlayerCountRegistry pcr, TpsMsptRecorder tmr) {
         if (pcr == null || tmr == null) return Map.of();
         Map<UUID, HytaleMetrics.WorldSample> out = new HashMap<>();
         for (UUID worldUuid : pcr.trackedWorlds()) {
