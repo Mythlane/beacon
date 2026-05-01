@@ -48,7 +48,7 @@ That single JAR emits TPS, MSPT, players online, and JVM runtime metrics
 ## What you get (v0.1.0-alpha)
 
 - `hytale.tps` (gauge, target 30, red threshold 27), per world.
-- `hytale.mspt` (histogram, sourced from Hytale's `HistoricMetric`).
+- `hytale.mspt` (histogram, ms, sourced from Hytale's `HistoricMetric`).
 - `hytale.players.online` (counter, idempotent on `PlayerDisconnectEvent`).
 - JVM runtime metrics (heap, GC, threads, classes, CPU) emitted by Beacon
   itself in library mode — no agent required.

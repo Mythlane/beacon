@@ -17,7 +17,8 @@ import io.opentelemetry.api.common.Attributes;
 /**
  * Polls each {@link World} on a fixed cadence, reads
  * {@code world.getBufferedTickLengthMetricSet().getLastValue()} (nanoseconds),
- * records it into the {@code hytale.mspt} histogram, derives
+ * converts to milliseconds and records it into the {@code hytale.mspt}
+ * histogram (unit {@code ms}), derives
  * {@code tps = min(30, 1e9 / lastTickNanos)} and stores it in a per-world
  * snapshot driving the {@code hytale.tps} gauge callback. Per-world
  * {@link Attributes} are cached so polling does not allocate per cycle.
@@ -78,7 +79,7 @@ public final class TpsMsptRecorder {
                 .build());
 
         long safeNanos = lastTickNanos <= 0L ? 1L : lastTickNanos;
-        metrics.recordMspt(safeNanos, attrs);
+        metrics.recordMspt(safeNanos / 1_000_000.0, attrs);
 
         long tps = Math.min(TPS_CEILING, 1_000_000_000L / safeNanos);
         tpsByWorld.put(worldUuid, new HytaleMetrics.WorldSample(attrs, tps));

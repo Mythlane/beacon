@@ -78,19 +78,19 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "histogram_quantile(0.50, sum(rate(hytale_mspt_nanoseconds_bucket[1m])) by (le, hytale_world_name))",
+          "expr": "histogram_quantile(0.50, sum(rate(hytale_mspt_milliseconds_bucket[5m])) by (le, hytale_world_name))",
           "legendFormat": "p50 — {{hytale_world_name}}"
         },
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "histogram_quantile(0.95, sum(rate(hytale_mspt_nanoseconds_bucket[1m])) by (le, hytale_world_name))",
+          "expr": "histogram_quantile(0.95, sum(rate(hytale_mspt_milliseconds_bucket[5m])) by (le, hytale_world_name))",
           "legendFormat": "p95 — {{hytale_world_name}}"
         },
         {
           "refId": "C",
           "datasource": { "type": "prometheus", "uid": "mimir" },
-          "expr": "histogram_quantile(0.99, sum(rate(hytale_mspt_nanoseconds_bucket[1m])) by (le, hytale_world_name))",
+          "expr": "histogram_quantile(0.99, sum(rate(hytale_mspt_milliseconds_bucket[5m])) by (le, hytale_world_name))",
           "legendFormat": "p99 — {{hytale_world_name}}"
         }
       ]

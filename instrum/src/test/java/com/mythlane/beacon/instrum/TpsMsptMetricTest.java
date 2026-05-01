@@ -57,8 +57,8 @@ class TpsMsptMetricTest {
         long tps = readGauge(data, "hytale.tps");
         assertThat(tps).isEqualTo(30L);
 
-        long msptSum = readHistogramSum(data, "hytale.mspt");
-        assertThat(msptSum).isEqualTo(33_333_333L);
+        double msptSum = readHistogramSum(data, "hytale.mspt");
+        assertThat(msptSum).isEqualTo(33_333_333L / 1_000_000.0);
     }
 
     @Test
@@ -89,8 +89,8 @@ class TpsMsptMetricTest {
     @Test
     void cardinalityGuardStripsUnknownAttributes() {
         var meter = openTelemetry.meterBuilder(HytaleMetrics.SCOPE_NAME).build();
-        var hist = meter.histogramBuilder("hytale.mspt").setUnit("ns").ofLongs().build();
-        hist.record(50_000_000L,
+        var hist = meter.histogramBuilder("hytale.mspt").setUnit("ms").build();
+        hist.record(50.0,
                 io.opentelemetry.api.common.Attributes.builder()
                         .put("hytale.world.uuid", "abc")
                         .put("hytale.world.name", "w")
@@ -139,8 +139,8 @@ class TpsMsptMetricTest {
                 .getLongGaugeData().getPoints().iterator().next().getValue();
     }
 
-    private static long readHistogramSum(Collection<MetricData> data, String name) {
-        return (long) data.stream()
+    private static double readHistogramSum(Collection<MetricData> data, String name) {
+        return data.stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst().orElseThrow()
                 .getHistogramData().getPoints().iterator().next().getSum();

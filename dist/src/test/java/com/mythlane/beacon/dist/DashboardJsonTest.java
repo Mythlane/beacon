@@ -61,7 +61,7 @@ class DashboardJsonTest {
             .contains("hytale_tps");
         assertThat(rawJson)
             .as("MSPT panel must query the hytale_mspt histogram")
-            .contains("hytale_mspt_nanoseconds_bucket");
+            .contains("hytale_mspt_milliseconds_bucket");
         assertThat(rawJson)
             .as("Players panel must query hytale_players_online")
             .contains("hytale_players_online");

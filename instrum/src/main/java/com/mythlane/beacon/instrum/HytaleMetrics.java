@@ -6,12 +6,12 @@ import java.util.function.Supplier;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.metrics.LongHistogram;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.ObservableLongGauge;
 
 /**
- * Builds {@code hytale.mspt} (histogram, ns), {@code hytale.tps} (observable
+ * Builds {@code hytale.mspt} (histogram, ms), {@code hytale.tps} (observable
  * gauge, 1/s) and {@code hytale.players.online} (observable gauge). Gauge
  * callbacks run on the OTel reader thread and must stay allocation-free and
  * thread-safe; data sources are {@link java.util.concurrent.ConcurrentHashMap}
@@ -23,7 +23,7 @@ public final class HytaleMetrics implements AutoCloseable {
 
     public static final String SCOPE_NAME = "com.mythlane.beacon.instrum";
 
-    private final LongHistogram msptHistogram;
+    private final DoubleHistogram msptHistogram;
     private final ObservableLongGauge tpsGauge;
     private final ObservableLongGauge playersGauge;
 
@@ -33,9 +33,8 @@ public final class HytaleMetrics implements AutoCloseable {
         Meter meter = openTelemetry.meterBuilder(SCOPE_NAME).build();
 
         this.msptHistogram = meter.histogramBuilder("hytale.mspt")
-                .setUnit("ns")
-                .setDescription("Milliseconds-per-tick of the world tick loop, in nanoseconds.")
-                .ofLongs()
+                .setUnit("ms")
+                .setDescription("Milliseconds-per-tick of the world tick loop.")
                 .build();
 
         this.tpsGauge = meter.gaugeBuilder("hytale.tps")
@@ -63,8 +62,8 @@ public final class HytaleMetrics implements AutoCloseable {
                 });
     }
 
-    public void recordMspt(long nanos, Attributes attributes) {
-        msptHistogram.record(nanos, attributes);
+    public void recordMspt(double millis, Attributes attributes) {
+        msptHistogram.record(millis, attributes);
     }
 
     @Override
