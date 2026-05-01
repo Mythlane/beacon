@@ -70,8 +70,15 @@ final class TelemetryBootstrap {
         }
 
         try {
-            io.opentelemetry.instrumentation.runtimemetrics.java17.RuntimeMetrics.create(otel);
-            LOG.info("Beacon JVM runtime metrics enabled (memory, GC, threads, classes, CPU)");
+            if (jvmAgentDetected()) {
+                LOG.info("OTel Java Agent detected; skipping Beacon library-mode JVM runtime metrics "
+                        + "to avoid double-publication. Agent provides JVM metrics under "
+                        + "io.opentelemetry.runtime-telemetry-java8 scope.");
+            } else {
+                io.opentelemetry.instrumentation.runtimemetrics.java17.RuntimeMetrics.create(otel);
+                LOG.info("Beacon library-mode JVM runtime metrics enabled (memory, GC, threads, classes, CPU). "
+                        + "No OTel Java Agent detected.");
+            }
         } catch (Throwable t) {
             LOG.warn("Beacon could not enable JVM runtime metrics", t);
         }
@@ -125,9 +132,7 @@ final class TelemetryBootstrap {
 
     private void warnIfJavaagentMissing() {
         try {
-            List<String> args = jvmInputArgsSupplier.get();
-            boolean hasAgent = args != null && args.stream().anyMatch(a -> a != null && a.contains("-javaagent"));
-            if (!hasAgent) {
+            if (!jvmAgentDetected()) {
                 LOG.warn("OTel Java Agent not detected. Beacon will emit JVM runtime metrics in "
                         + "library mode (heap, GC, threads, classes, CPU). HTTP/JDBC/Netty "
                         + "auto-instrumentation requires the agent.");
@@ -135,6 +140,11 @@ final class TelemetryBootstrap {
         } catch (Throwable t) {
             LOG.warn("Could not inspect JVM input arguments", t);
         }
+    }
+
+    private boolean jvmAgentDetected() {
+        List<String> args = jvmInputArgsSupplier.get();
+        return args != null && args.stream().anyMatch(a -> a != null && a.contains("-javaagent"));
     }
 
     static Map<UUID, HytaleMetrics.WorldSample> playerCountSnapshot(PlayerCountRegistry pcr, TpsMsptRecorder tmr) {

@@ -211,6 +211,49 @@ class TelemetryBootstrapTest {
     }
 
     @Test
+    void bindInstrumentsSkipsRuntimeMetricsWhenAgentPresent() {
+        java.util.logging.Logger jul = java.util.logging.Logger.getLogger(TelemetryBootstrap.class.getName());
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        java.util.logging.StreamHandler handler = new java.util.logging.StreamHandler(captured, new java.util.logging.SimpleFormatter());
+        handler.setLevel(java.util.logging.Level.ALL);
+        jul.addHandler(handler);
+        try {
+            TelemetryBootstrap b = bootstrap(
+                    OpenTelemetry::noop,
+                    List.of("-javaagent:opentelemetry-javaagent.jar"),
+                    mock(IEventRegistry.class));
+            b.bindInstruments(OpenTelemetry.noop(), BeaconConfig.defaults());
+            handler.flush();
+        } finally {
+            jul.removeHandler(handler);
+        }
+
+        String log = captured.toString();
+        assertThat(log).contains("skipping Beacon library-mode JVM runtime metrics");
+        assertThat(log).doesNotContain("Beacon library-mode JVM runtime metrics enabled");
+    }
+
+    @Test
+    void bindInstrumentsEnablesRuntimeMetricsWhenAgentAbsent() {
+        java.util.logging.Logger jul = java.util.logging.Logger.getLogger(TelemetryBootstrap.class.getName());
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        java.util.logging.StreamHandler handler = new java.util.logging.StreamHandler(captured, new java.util.logging.SimpleFormatter());
+        handler.setLevel(java.util.logging.Level.ALL);
+        jul.addHandler(handler);
+        try {
+            TelemetryBootstrap b = bootstrap(OpenTelemetry::noop, List.of("-Xmx4G"), mock(IEventRegistry.class));
+            b.bindInstruments(OpenTelemetry.noop(), BeaconConfig.defaults());
+            handler.flush();
+        } finally {
+            jul.removeHandler(handler);
+        }
+
+        String log = captured.toString();
+        assertThat(log).contains("Beacon library-mode JVM runtime metrics enabled");
+        assertThat(log).doesNotContain("skipping Beacon library-mode JVM runtime metrics");
+    }
+
+    @Test
     void javaagentWarnTriggeredWhenAbsent() {
         java.util.logging.Logger jul = java.util.logging.Logger.getLogger(TelemetryBootstrap.class.getName());
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
